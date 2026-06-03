@@ -9,7 +9,8 @@ import {
   Play,
   RefreshCw,
   Send,
-  Sparkles
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 
 const DEFAULT_REQUIREMENTS = `Proposal must include:
@@ -81,6 +82,7 @@ function App() {
   const [decisionIndex, setDecisionIndex] = useState(0);
   const [memorySavedAt, setMemorySavedAt] = useState('');
   const [memoryReady, setMemoryReady] = useState(false);
+  const [refining, setRefining] = useState(false);
 
   const matrixStats = useMemo(() => {
     const rows = result?.complianceMatrix || [];
@@ -137,6 +139,24 @@ function App() {
     return startAgentForTopic(sampleTopic);
   }
 
+  async function refineProblem() {
+    const trimmed = topicInput.trim();
+    if (!trimmed) return;
+
+    setRefining(true);
+    setError('');
+
+    try {
+      const data = await postJson('/api/refine/problem', { roughIdea: trimmed });
+      updateProjectField('problem', data.problemStatement);
+      setRunLog((current) => [...current, logEntry('Refine', 'Claude rewrote the rough idea into a problem statement.')]);
+    } catch (requestError) {
+      setError(readError(requestError));
+    } finally {
+      setRefining(false);
+    }
+  }
+
   async function startAgentForTopic(nextTopic) {
     setStatus('starting');
     setError('');
@@ -148,15 +168,24 @@ function App() {
         requirements: DEFAULT_REQUIREMENTS
       });
 
-      setProject({ ...EMPTY_PROJECT, ...data.project });
-      setFieldSuggestions(data.fieldSuggestions || []);
+      const suggestions = data.fieldSuggestions || [];
+      const problemSuggestion = suggestions.find((s) => s.field === 'problem');
+      const titleSuggestion = suggestions.find((s) => s.field === 'title');
+
+      setProject({
+        ...EMPTY_PROJECT,
+        ...data.project,
+        title: data.project.title || titleSuggestion?.value || '',
+        problem: data.project.problem || problemSuggestion?.value || ''
+      });
+      setFieldSuggestions(suggestions);
       setDecisions(data.decisions || []);
       setQuestions(data.questions || []);
       setSuggestionIndex(0);
       setDecisionIndex(0);
       setRunLog([
         logEntry('Extract', data.runMessage || 'LLM prepared structured suggestions.'),
-        logEntry('Decide', `Review ${(data.fieldSuggestions || []).length} fields and ${(data.decisions || []).length} decision card(s).`)
+        logEntry('Decide', `Review ${suggestions.length} fields and ${(data.decisions || []).length} decision card(s).`)
       ]);
       setCustomNote('');
     } catch (requestError) {
@@ -438,6 +467,10 @@ function App() {
               <button className="secondary" disabled={status !== 'idle'} onClick={startSampleAgent} type="button">
                 <Sparkles size={18} aria-hidden="true" />
                 Sample
+              </button>
+              <button className="secondary" disabled={!topicInput.trim() || refining || status !== 'idle'} onClick={refineProblem} type="button">
+                {refining ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Wand2 size={18} aria-hidden="true" />}
+                Refine to Problem
               </button>
               <button className="secondary icon-button" onClick={reset} type="button" aria-label="Reset">
                 <RefreshCw size={18} aria-hidden="true" />

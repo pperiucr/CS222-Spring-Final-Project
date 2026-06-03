@@ -55,6 +55,11 @@ Rules:
 
 const QUESTION_SYSTEM_PROMPT = `You are running an interactive proposal-agent workflow.
 
+Rules:
+- "title" must be short and crisp: 4-7 words, suitable as a paper title. Do not use the rough idea verbatim.
+- "problem" must be a clear, professional 2-4 sentence problem statement inferred from the rough idea.
+- Populate both "title" and "problem" in the project object immediately — do not leave them empty.
+
 Return strict JSON:
 {
   "project": {
@@ -778,6 +783,7 @@ function keepOnlyAcceptedStartFields(originalProject, suggestedProject) {
     ...EMPTY_PROJECT_FOR_SERVER,
     ...originalProject,
     title: suggestedProject.title || originalProject.title,
+    problem: suggestedProject.problem || originalProject.problem,
     topic: originalProject.topic || originalProject.title,
     requirements: originalProject.requirements || DEFAULT_REQUIREMENTS
   };

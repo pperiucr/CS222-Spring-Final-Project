@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { proposalLatexToPdf } from './pdfExport.js';
 import { answerAgentQuestion, generateProposal, startAgentSession } from './proposalGenerator.js';
+import { refineProblemStatement } from './claudeRefine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -67,6 +68,25 @@ app.post('/api/proposal', async (request, response) => {
   } catch (error) {
     response.status(500).json({
       error: 'Proposal generation failed.',
+      detail: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+app.post('/api/refine/problem', async (request, response) => {
+  try {
+    const roughIdea = String(request.body?.roughIdea || '').trim();
+
+    if (!roughIdea) {
+      response.status(400).json({ error: 'roughIdea is required.' });
+      return;
+    }
+
+    const problemStatement = await refineProblemStatement(roughIdea);
+    response.json({ problemStatement });
+  } catch (error) {
+    response.status(500).json({
+      error: 'Problem statement refinement failed.',
       detail: error instanceof Error ? error.message : String(error)
     });
   }
