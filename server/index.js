@@ -3,7 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { proposalLatexToPdf } from './pdfExport.js';
 import { answerAgentQuestion, generateProposal, startAgentSession, buildLatexFromOutput } from './proposalGenerator.js';
-import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference } from './claudeRefine.js';
+import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference, reviewProposal, autoFixField } from './claudeRefine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -216,6 +216,31 @@ app.post('/api/refine/problem', async (request, response) => {
       error: 'Problem statement refinement failed.',
       detail: error instanceof Error ? error.message : String(error)
     });
+  }
+});
+
+app.post('/api/review/proposal', async (request, response) => {
+  try {
+    const { proposalOutput } = request.body || {};
+    const review = await reviewProposal(proposalOutput || {});
+    response.json(review);
+  } catch (error) {
+    response.status(500).json({ error: 'Review failed.', detail: error.message });
+  }
+});
+
+app.post('/api/review/auto-fix', async (request, response) => {
+  try {
+    const { proposalOutput, issues } = request.body || {};
+    const fixes = {};
+    for (const issue of (issues || [])) {
+      if (issue.field && proposalOutput[issue.field]) {
+        fixes[issue.field] = await autoFixField(issue.field, proposalOutput[issue.field], issue.message);
+      }
+    }
+    response.json({ fixes });
+  } catch (error) {
+    response.status(500).json({ error: 'Auto-fix failed.', detail: error.message });
   }
 });
 

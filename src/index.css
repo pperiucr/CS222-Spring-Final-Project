@@ -1279,6 +1279,184 @@ th {
   }
 }
 
+/* Review Dashboard */
+.review-dashboard-section {
+  border: 1px solid #cbd7dc;
+  border-radius: 12px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.review-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.review-dashboard-heading {
+  margin: 0;
+  color: #1f2d32;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.review-overall {
+  margin: 16px 0 14px;
+}
+
+.review-overall-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.review-overall-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #28584b;
+}
+
+.review-overall-score {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #1f2d32;
+  line-height: 1;
+}
+
+.review-overall-max {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6b8e9b;
+}
+
+.review-score-bar-wrap {
+  height: 10px;
+  background: #e3eaed;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.review-score-bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+.review-dimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 18px;
+}
+
+.review-dimension-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+}
+
+.review-dimension-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #3d5c65;
+  white-space: nowrap;
+}
+
+.review-dimension-bar-wrap {
+  height: 7px;
+  background: #e3eaed;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.review-dimension-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.review-dimension-pct {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1f2d32;
+  text-align: right;
+}
+
+.review-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding-top: 4px;
+  border-top: 1px solid #e3eaed;
+  padding-top: 14px;
+}
+
+.review-issues-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-issue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f8fafb;
+  border: 1px solid #e3eaed;
+}
+
+.review-issue-badge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 1px;
+}
+
+.review-issue-badge-high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.review-issue-badge-medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.review-issue-badge-low {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.review-issue-msg {
+  font-size: 0.87rem;
+  color: #2d4a52;
+  line-height: 1.45;
+}
+
+.review-no-issues {
+  font-size: 0.87rem;
+  color: #22c55e;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 0;
+}
+
+@media (max-width: 920px) {
+  .review-dimension-row {
+    grid-template-columns: 120px 1fr 40px;
+  }
+}
+
 /* Proposal Stepper */
 .proposal-stepper-wrap {
   border: 1px solid #cbd7dc;

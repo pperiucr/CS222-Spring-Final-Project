@@ -21,8 +21,56 @@ const MOCK = {
     { name: 'Simulation Setup & Experiments', months: 'Week 3' },
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
-  reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.'
+  reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  review: {
+    overallScore: 82,
+    dimensions: {
+      completeness: 90,
+      methodology: 75,
+      novelty: 78,
+      references: 85,
+      writingQuality: 88,
+      consistency: 80
+    },
+    issues: [
+      { field: 'methodology_text', severity: 'medium', message: 'Evaluation metrics are not clearly defined. Specify quantitative benchmarks for measuring success.' },
+      { field: 'hypothesis', severity: 'low', message: 'Hypotheses could be more specific and measurable — add baseline comparisons.' },
+      { field: 'references', severity: 'low', message: 'Consider adding more recent references (post-2022) to strengthen novelty claims.' },
+      { field: 'contributions', severity: 'medium', message: 'Contributions overlap with existing work — clarify the novel aspect more explicitly.' },
+      { field: 'risks_mitigation', severity: 'low', message: 'Mitigation strategies lack specificity. Add concrete fallback plans for each risk.' }
+    ]
+  }
 };
+
+const REVIEW_SYSTEM_PROMPT = `You are a rigorous research proposal reviewer. Evaluate the given proposal and return a JSON assessment with this exact shape:
+{
+  "overallScore": <integer 0-100>,
+  "dimensions": {
+    "completeness": <integer 0-100>,
+    "methodology": <integer 0-100>,
+    "novelty": <integer 0-100>,
+    "references": <integer 0-100>,
+    "writingQuality": <integer 0-100>,
+    "consistency": <integer 0-100>
+  },
+  "issues": [
+    { "field": "<field_key>", "severity": "high|medium|low", "message": "<concise actionable issue description>" }
+  ]
+}
+
+Scoring guide:
+- completeness: Are all required sections present and adequately filled?
+- methodology: Is the research approach sound, detailed, and appropriate?
+- novelty: Does the proposal identify a genuine gap and propose novel contributions?
+- references: Are citations present, relevant, and properly formatted?
+- writingQuality: Is the writing clear, professional, and academically rigorous?
+- consistency: Are all sections aligned and internally consistent?
+
+Return 3-6 specific, actionable issues. field should be one of: research_title, objective, problem_statement, hypothesis, motivation, methodology_text, tools, contributions, timeline_budget, risks_mitigation, references. Return only the JSON object.`;
+
+const AUTO_FIX_SYSTEM_PROMPT = `You are a research proposal editor. Given a proposal field name, its current content, and an issue to fix, return an improved version of the content that addresses the issue while preserving correct existing content.
+Return strict JSON: { "improved": "..." }
+Keep it concise and professional. Return only the JSON.`;
 
 const PROBLEM_SYSTEM_PROMPT = `You are a research proposal writing expert. Take a rough, informal research idea and rewrite it as a crisp, sharp, professional problem statement.
 
@@ -259,4 +307,29 @@ export async function refineTitleAndIntro(roughIdea) {
 export async function refineProblemStatement(roughIdea) {
   if (IS_MOCK) return MOCK.problemStatement;
   return callGemini(PROBLEM_SYSTEM_PROMPT, `Rough idea: ${roughIdea}`);
+}
+
+export async function reviewProposal(proposalOutput) {
+  if (IS_MOCK) return MOCK.review;
+  const summary = Object.entries(proposalOutput)
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) {
+    return {
+      overallScore: 0,
+      dimensions: { completeness: 0, methodology: 0, novelty: 0, references: 0, writingQuality: 0, consistency: 0 },
+      issues: [{ field: 'general', severity: 'high', message: 'Proposal is empty. Please fill in the sections first.' }]
+    };
+  }
+  return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+export async function autoFixField(field, content, issue) {
+  if (IS_MOCK) return content + '\n\n[AI revised: ' + issue + ']';
+  const parsed = await callGeminiJson(
+    AUTO_FIX_SYSTEM_PROMPT,
+    `Field: ${field}\nCurrent content:\n${content}\n\nIssue to fix: ${issue}`
+  );
+  return String(parsed.improved || content).trim();
 }

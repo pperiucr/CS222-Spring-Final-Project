@@ -62,6 +62,12 @@ const TABS = [
 
 const MEMORY_KEY = 'proposal-agent-final-project-memory-v1';
 
+function scoreColor(score) {
+  if (score >= 85) return '#22c55e';
+  if (score >= 65) return '#f59e0b';
+  return '#ef4444';
+}
+
 const RESEARCH_AREAS = ['AI/ML', 'Systems', 'Security', 'HCI', 'Networking', 'Databases', 'Theory', 'Bioinformatics', 'Other'];
 
 const EMPTY_PROJECT_DETAILS = {
@@ -113,6 +119,11 @@ function App() {
   const [risksData, setRisksData] = useState({ savedRisks: [] });
   const [referencesData, setReferencesData] = useState({ savedRefs: [] });
   const [generatePopupOpen, setGeneratePopupOpen] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewResult, setReviewResult] = useState(null);
+  const [reviewIssuesOpen, setReviewIssuesOpen] = useState(false);
+  const [autoFixing, setAutoFixing] = useState(false);
+  const [reviewError, setReviewError] = useState('');
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -130,6 +141,41 @@ function App() {
 
   function updateOutput(fields) {
     setProposalOutput((prev) => ({ ...prev, ...fields }));
+  }
+
+  async function handleReviewProposal() {
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const result = await postJson('/api/review/proposal', { proposalOutput });
+      setReviewResult(result);
+      setReviewIssuesOpen(false);
+    } catch (err) {
+      setReviewError(err.message || 'Review failed.');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function handleAutoFix() {
+    if (!reviewResult?.issues?.length) return;
+    setAutoFixing(true);
+    setReviewError('');
+    try {
+      const { fixes } = await postJson('/api/review/auto-fix', {
+        proposalOutput,
+        issues: reviewResult.issues.filter((i) => i.field !== 'general')
+      });
+      if (Object.keys(fixes).length > 0) {
+        updateOutput(fixes);
+        const updated = await postJson('/api/review/proposal', { proposalOutput: { ...proposalOutput, ...fixes } });
+        setReviewResult(updated);
+      }
+    } catch (err) {
+      setReviewError(err.message || 'Auto-fix failed.');
+    } finally {
+      setAutoFixing(false);
+    }
   }
 
   const matrixStats = useMemo(() => {
@@ -565,6 +611,76 @@ function App() {
                 Generate Proposal
               </button>
             </div>
+          </div>
+
+          <div className="review-dashboard-section">
+            <div className="review-dashboard-header">
+              <h2 className="review-dashboard-heading">Review Dashboard</h2>
+              <button className="primary" type="button" onClick={handleReviewProposal} disabled={reviewLoading}>
+                {reviewLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ClipboardCheck size={16} aria-hidden="true" />}
+                {reviewLoading ? 'Reviewing…' : 'Review Proposal'}
+              </button>
+            </div>
+
+            {reviewError && <p className="error-banner">{reviewError}</p>}
+
+            {reviewResult && (
+              <>
+                <div className="review-overall">
+                  <div className="review-overall-top">
+                    <span className="review-overall-label">Overall Score</span>
+                    <span className="review-overall-score">{reviewResult.overallScore}<span className="review-overall-max">/100</span></span>
+                  </div>
+                  <div className="review-score-bar-wrap">
+                    <div className="review-score-bar" style={{ width: `${reviewResult.overallScore}%`, background: scoreColor(reviewResult.overallScore) }} />
+                  </div>
+                </div>
+
+                <div className="review-dimensions">
+                  {[
+                    ['Completeness',   'completeness'],
+                    ['Methodology',    'methodology'],
+                    ['Novelty',        'novelty'],
+                    ['References',     'references'],
+                    ['Writing Quality','writingQuality'],
+                    ['Consistency',    'consistency'],
+                  ].map(([label, key]) => (
+                    <div key={key} className="review-dimension-row">
+                      <span className="review-dimension-label">{label}</span>
+                      <div className="review-dimension-bar-wrap">
+                        <div className="review-dimension-bar" style={{ width: `${reviewResult.dimensions?.[key] ?? 0}%`, background: scoreColor(reviewResult.dimensions?.[key] ?? 0) }} />
+                      </div>
+                      <span className="review-dimension-pct">{reviewResult.dimensions?.[key] ?? 0}%</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="review-actions">
+                  <button className="secondary" type="button" onClick={() => setReviewIssuesOpen((v) => !v)}>
+                    <ListChecks size={16} aria-hidden="true" />
+                    {reviewIssuesOpen ? 'Hide Issues' : 'View Issues'}
+                  </button>
+                  <button className="primary" type="button" onClick={handleAutoFix} disabled={autoFixing}>
+                    {autoFixing ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Wand2 size={16} aria-hidden="true" />}
+                    {autoFixing ? 'Fixing…' : 'Auto Fix'}
+                  </button>
+                </div>
+
+                {reviewIssuesOpen && (
+                  <div className="review-issues-list">
+                    {(reviewResult.issues || []).length === 0
+                      ? <p className="review-no-issues">No issues found — proposal looks great!</p>
+                      : (reviewResult.issues || []).map((issue, i) => (
+                        <div key={i} className={`review-issue-item review-issue-${issue.severity}`}>
+                          <span className={`review-issue-badge review-issue-badge-${issue.severity}`}>{issue.severity}</span>
+                          <span className="review-issue-msg">{issue.message}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {generatePopupOpen && (
