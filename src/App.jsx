@@ -68,10 +68,10 @@ const EMPTY_PROJECT_DETAILS = {
   rough_idea: '',
   research_title: '',
   introduction: '',
-  student_name: '',
-  university: '',
-  department: '',
-  supervisor: '',
+  student_name: 'Prakash Perimbeti',
+  university: 'UC Riverside',
+  department: 'Computer Science',
+  supervisor: 'Prof. Yue Dong',
   degree_program: 'MS',
   research_area: 'AI/ML',
   budget: '',
@@ -512,6 +512,20 @@ function App() {
             }}
           />
 
+          {(projectDetails.research_title || projectDetails.student_name) && (
+            <div className="proposal-title-block">
+              {projectDetails.research_title && (
+                <h2 className="proposal-title-main">{projectDetails.research_title}</h2>
+              )}
+              <div className="proposal-title-meta">
+                {projectDetails.student_name && <span><strong>Student:</strong> {projectDetails.student_name}</span>}
+                {projectDetails.supervisor && <span><strong>Supervisor:</strong> {projectDetails.supervisor}</span>}
+                {projectDetails.university && <span><strong>University:</strong> {projectDetails.university}</span>}
+                {projectDetails.department && <span><strong>Department:</strong> {projectDetails.department}</span>}
+              </div>
+            </div>
+          )}
+
           <div className="proposal-output-section">
             <h2 className="proposal-output-heading">Research Proposal Draft</h2>
             <div className="proposal-output-grid">
@@ -547,12 +561,7 @@ function App() {
 
           {generatePopupOpen && (
             <GenerateFormatPopup
-              result={result}
-              pdfUrl={pdfUrl}
-              status={status}
-              onGenerate={generateProposal}
-              onDownloadPdf={downloadPdf}
-              onDownloadLatex={downloadLatex}
+              proposalOutput={proposalOutput}
               onClose={() => setGeneratePopupOpen(false)}
             />
           )}
@@ -1043,69 +1052,105 @@ function compactResult(result) {
   };
 }
 
-function GenerateFormatPopup({ result, pdfUrl, status, onGenerate, onDownloadPdf, onDownloadLatex, onClose }) {
-  const busy = status === 'drafting' || status === 'exporting';
+function GenerateFormatPopup({ proposalOutput, onClose }) {
+  const [latex, setLatex] = useState('');
+  const [localPdfUrl, setLocalPdfUrl] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [view, setView] = useState('pdf');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    handleGenerate();
+    return () => { if (localPdfUrl) URL.revokeObjectURL(localPdfUrl); };
+  }, []);
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setError('');
+    try {
+      const { proposalLatex } = await postJson('/api/generate-from-output', proposalOutput);
+      setLatex(proposalLatex);
+      const pdfResponse = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalLatex, title: proposalOutput.research_title || 'proposal' })
+      });
+      if (pdfResponse.ok) {
+        const blob = await pdfResponse.blob();
+        setLocalPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(blob); });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function downloadLatex() {
+    if (!latex) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([latex], { type: 'text/x-tex' }));
+    a.download = 'proposal.tex';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function downloadPdf() {
+    if (!localPdfUrl) return;
+    const a = document.createElement('a');
+    a.href = localPdfUrl;
+    a.download = 'proposal.pdf';
+    a.click();
+  }
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-card gen-format-popup" role="dialog" aria-modal="true" aria-label="Generate Proposal">
-        <div className="modal-header">
-          <h2>Generate Proposal</h2>
-          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <div className="gen-format-grid">
-            <div className="gen-format-card">
-              <FileText size={28} className="gen-format-icon" aria-hidden="true" />
-              <strong>PDF</strong>
-              <p>Compiled, print-ready PDF via LaTeX</p>
-              <div className="gen-format-actions">
-                <button className="primary" type="button" disabled={busy} onClick={onGenerate}>
-                  {status === 'drafting' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
-                  Generate
-                </button>
-                {pdfUrl && (
-                  <>
-                    <a className="secondary gen-format-btn" href={pdfUrl} target="_blank" rel="noreferrer">
-                      <FileText size={15} aria-hidden="true" /> View
-                    </a>
-                    <button className="secondary" type="button" disabled={busy} onClick={onDownloadPdf}>
-                      {status === 'exporting' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Download size={15} aria-hidden="true" />}
-                      Download
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="gen-format-card">
-              <FileText size={28} className="gen-format-icon" aria-hidden="true" />
-              <strong>LaTeX</strong>
-              <p>Editable .tex source file for Overleaf or local compile</p>
-              <div className="gen-format-actions">
-                <button className="primary" type="button" disabled={busy} onClick={onGenerate}>
-                  {status === 'drafting' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
-                  Generate
-                </button>
-                {result?.proposalLatex && (
-                  <button className="secondary" type="button" onClick={onDownloadLatex}>
-                    <Download size={15} aria-hidden="true" /> Download .tex
-                  </button>
-                )}
-              </div>
-            </div>
+    <div className="modal-overlay gen-preview-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="gen-preview-card" role="dialog" aria-modal="true" aria-label="Research Proposal Preview">
+        <div className="gen-preview-topbar">
+          <div className="gen-preview-tabs">
+            <button className={`tab ${view === 'pdf' ? 'active' : ''}`} type="button" onClick={() => setView('pdf')}>
+              <FileText size={15} aria-hidden="true" /> PDF Preview
+            </button>
+            <button className={`tab ${view === 'latex' ? 'active' : ''}`} type="button" onClick={() => setView('latex')}>
+              <FileText size={15} aria-hidden="true" /> LaTeX Source
+            </button>
           </div>
-
-          {!result && (
-            <p className="gen-format-hint">Click Generate to compile the proposal from your draft fields. PDF requires Tectonic to be installed.</p>
-          )}
+          <div className="gen-preview-actions">
+            {generating && <Loader2 className="spin" size={18} style={{ color: '#2f6f62' }} aria-hidden="true" />}
+            {localPdfUrl && (
+              <button className="secondary" type="button" onClick={downloadPdf}>
+                <Download size={15} aria-hidden="true" /> Download PDF
+              </button>
+            )}
+            {latex && (
+              <button className="secondary" type="button" onClick={downloadLatex}>
+                <Download size={15} aria-hidden="true" /> Download LaTeX
+              </button>
+            )}
+            <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
-        <div className="modal-footer">
-          <button className="secondary" type="button" onClick={onClose}>Close</button>
+        <div className="gen-preview-body">
+          {error && <p className="error-banner" style={{ margin: '12px' }}>{error}</p>}
+          {generating && !latex && (
+            <div className="gen-preview-loading">
+              <Loader2 className="spin" size={36} style={{ color: '#2f6f62' }} aria-hidden="true" />
+              <p>Generating proposal…</p>
+            </div>
+          )}
+          {!generating && view === 'pdf' && (
+            localPdfUrl
+              ? <iframe className="gen-preview-iframe" src={localPdfUrl} title="Proposal PDF" />
+              : latex
+                ? <p className="gen-preview-hint">PDF compilation requires Tectonic. Download the LaTeX source to compile manually.</p>
+                : null
+          )}
+          {!generating && view === 'latex' && latex && (
+            <pre className="gen-preview-latex">{latex}</pre>
+          )}
         </div>
       </div>
     </div>
@@ -1158,48 +1203,43 @@ function ProposalStepper({ completed, onOpen }) {
   );
 }
 
-const CITATION_STYLES = ['APA', 'IEEE', 'ACM'];
-
 function ReferencesModal({ onSave, onClose }) {
-  const [citationStyle, setCitationStyle] = useState('APA');
-  const [references, setReferences] = useState([{ id: 1, doi: '', bibtex: '' }]);
-  const [formatted, setFormatted] = useState('');
-  const [report, setReport] = useState('');
-  const [busy, setBusy] = useState('');
+  const [doi, setDoi] = useState('');
+  const [referenceText, setReferenceText] = useState('');
+  const [savedRefs, setSavedRefs] = useState([]);
+  const [fetchBusy, setFetchBusy] = useState(false);
   const [error, setError] = useState('');
 
-  function addReference() {
-    setReferences((prev) => [...prev, { id: Date.now(), doi: '', bibtex: '' }]);
-  }
-
-  function setRefField(id, field, value) {
-    setReferences((prev) => prev.map((r) => r.id === id ? { ...r, [field]: value } : r));
-  }
-
-  function removeReference(id) {
-    setReferences((prev) => prev.length > 1 ? prev.filter((r) => r.id !== id) : prev);
-  }
-
-  async function handleAction(action) {
-    const filled = references.filter((r) => r.doi.trim() || r.bibtex.trim());
-    if (!filled.length) { setError('Add at least one DOI or BibTeX entry.'); return; }
-    setBusy(action);
+  async function handleFetch() {
+    if (!doi.trim()) { setError('Enter a DOI first.'); return; }
+    setFetchBusy(true);
     setError('');
     try {
-      if (action === 'generate') {
-        const data = await postJson('/api/research/generate-references', { citationStyle, references });
-        setFormatted(data.formatted);
-        setReport('');
-      } else {
-        const data = await postJson('/api/research/validate-citations', { citationStyle, references });
-        setReport(data.report);
-        setFormatted('');
-      }
+      const data = await postJson('/api/research/fetch-doi', { doi: doi.trim() });
+      setReferenceText(data.reference);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusy('');
+      setFetchBusy(false);
     }
+  }
+
+  function addReference() {
+    if (!referenceText.trim()) { setError('Enter or fetch a reference first.'); return; }
+    setSavedRefs((prev) => [...prev, { id: Date.now(), text: referenceText.trim() }]);
+    setDoi('');
+    setReferenceText('');
+    setError('');
+  }
+
+  function removeRef(id) {
+    setSavedRefs((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  function shortTitle(text) {
+    const quoted = text.match(/"([^"]+)"/);
+    if (quoted) return quoted[1];
+    return text.length > 80 ? text.slice(0, 80) + '…' : text;
   }
 
   return (
@@ -1216,84 +1256,68 @@ function ReferencesModal({ onSave, onClose }) {
           {error && <p className="error-banner">{error}</p>}
 
           <div className="modal-field-group">
-            <span className="modal-field-label">Citation Style</span>
-            <div className="radio-group">
-              {CITATION_STYLES.map((style) => (
-                <label key={style} className="radio-label">
-                  <input type="radio" name="citation_style" value={style} checked={citationStyle === style} onChange={() => setCitationStyle(style)} />
-                  {style}
-                </label>
-              ))}
+            <span className="modal-field-label">DOI</span>
+            <div className="ref-doi-row">
+              <input
+                value={doi}
+                onChange={(e) => setDoi(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleFetch(); }}
+                placeholder="e.g. 10.1109/COMST.2018.2868922"
+              />
+              <button className="secondary" type="button" disabled={fetchBusy || !doi.trim()} onClick={handleFetch}>
+                {fetchBusy ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
+                Fetch
+              </button>
             </div>
+            <span className="ref-doi-hint">Example: 10.1109/COMST.2018.2868922</span>
           </div>
 
-          <hr className="rp-divider" />
+          <label>
+            Reference
+            <textarea
+              value={referenceText}
+              onChange={(e) => setReferenceText(e.target.value)}
+              placeholder="Reference text will appear here after clicking Fetch, or type manually..."
+              style={{ minHeight: '110px', fontFamily: 'inherit', fontSize: '0.88rem', lineHeight: '1.55' }}
+            />
+          </label>
 
-          <div className="ref-list">
-            {references.map((ref, index) => (
-              <div key={ref.id} className="ref-entry">
-                <div className="ref-entry-header">
-                  <span className="modal-field-label">Reference {index + 1}</span>
-                  {references.length > 1 && (
-                    <button className="secondary icon-button" type="button" onClick={() => removeReference(ref.id)} aria-label="Remove reference">
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-                <label>
-                  DOI
-                  <input value={ref.doi} onChange={(e) => setRefField(ref.id, 'doi', e.target.value)} placeholder="e.g. 10.1145/3292500.3330701" />
-                </label>
-                <div className="ref-or-divider"><span>OR</span></div>
-                <label>
-                  BibTeX
-                  <textarea
-                    value={ref.bibtex}
-                    onChange={(e) => setRefField(ref.id, 'bibtex', e.target.value)}
-                    placeholder={'@article{key,\n  author={...},\n  title={...},\n  year={2024}\n}'}
-                    style={{ minHeight: '90px', fontFamily: 'monospace', fontSize: '0.85rem' }}
-                  />
-                </label>
+          <div className="ref-add-center">
+            <button className="secondary" type="button" onClick={addReference}>
+              <Plus size={16} aria-hidden="true" />
+              Add Reference
+            </button>
+          </div>
+
+          {savedRefs.length > 0 && (
+            <>
+              <hr className="rp-divider" />
+              <div className="modal-field-group">
+                <span className="modal-field-label">Added References</span>
+                <ol className="ref-saved-list">
+                  {savedRefs.map((ref, index) => (
+                    <li key={ref.id} className="ref-saved-item">
+                      <span>{shortTitle(ref.text)}</span>
+                      <button className="secondary icon-button" type="button" onClick={() => removeRef(ref.id)} aria-label="Remove">
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ol>
               </div>
-            ))}
-          </div>
-
-          <button className="llm-help-button" type="button" onClick={addReference}>
-            <Plus size={16} aria-hidden="true" />
-            Add Reference
-          </button>
-
-          <hr className="rp-divider" />
-
-          <div className="rp-action-row">
-            <button className="secondary" type="button" disabled={!!busy} onClick={() => handleAction('generate')}>
-              {busy === 'generate' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
-              Generate References
-            </button>
-            <button className="secondary" type="button" disabled={!!busy} onClick={() => handleAction('validate')}>
-              {busy === 'validate' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <CheckCircle2 size={15} aria-hidden="true" />}
-              Validate Citations
-            </button>
-          </div>
-
-          {formatted && (
-            <div className="rp-motivation-box">
-              <span className="rp-motivation-label">Formatted References ({citationStyle})</span>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{formatted}</pre>
-            </div>
-          )}
-
-          {report && (
-            <div className="rp-motivation-box">
-              <span className="rp-motivation-label">Validation Report</span>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{report}</pre>
-            </div>
+            </>
           )}
         </div>
 
         <div className="modal-footer">
           <button className="secondary" type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" type="button" onClick={() => onSave({ formatted, citationStyle, references })}>Save</button>
+          <button
+            className="primary"
+            type="button"
+            onClick={() => onSave({ formatted: savedRefs.map((r) => r.text).join('\n\n'), references: savedRefs })}
+          >
+            Save
+          </button>
         </div>
       </div>
     </div>
@@ -2009,7 +2033,7 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
             onClick={handleLlmHelp}
           >
             {llmHelping ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <BotMessageSquare size={16} aria-hidden="true" />}
-            LLM Help
+            LLM Generate
           </button>
           {llmError && <p className="error-banner">{llmError}</p>}
 

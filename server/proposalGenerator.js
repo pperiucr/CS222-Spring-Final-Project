@@ -1070,6 +1070,52 @@ function extractNestedLatexString(value) {
     .replace(/\\\\/g, '\\');
 }
 
+export function buildLatexFromOutput(output) {
+  const title = clean(output.research_title) || 'Research Proposal';
+  const objective = clean(output.objective);
+  const motivation = clean(output.motivation);
+  const hypothesis = clean(output.hypothesis);
+  const methodology = clean(output.methodology_text);
+  const tools = clean(output.tools);
+  const contributions = clean(output.contributions);
+  const timeline = clean(output.timeline_budget);
+  const risks = clean(output.risks_mitigation);
+  const refs = clean(output.references);
+
+  return String.raw`\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlist{nosep}
+\title{${escapeLatex(title)}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+${objective ? `\\begin{abstract}\n${latexParagraph(objective)}\n\\end{abstract}\n` : ''}
+
+${motivation ? `\\section{Motivation}\n${latexParagraph(motivation)}\n` : ''}
+
+${hypothesis ? `\\section{Problem Hypothesis}\n${latexParagraph(hypothesis)}\n` : ''}
+
+${methodology ? `\\section{Methodology}\n${latexParagraph(methodology)}\n` : ''}
+
+${tools ? `\\section{Tools}\n${latexParagraph(tools)}\n` : ''}
+
+${contributions ? `\\section{Expected Contributions}\n${latexParagraph(contributions)}\n` : ''}
+
+${timeline ? `\\section{Timeline and Budget}\n${latexParagraph(timeline)}\n` : ''}
+
+${risks ? `\\section{Risks and Mitigation}\n${latexParagraph(risks)}\n` : ''}
+
+${refs ? `\\section{References}\n${latexParagraph(refs)}\n` : ''}
+
+\end{document}
+`;
+}
+
 function latexParagraph(value) {
   return escapeLatex(value)
     .split(/\n+/)

@@ -2,8 +2,8 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import { proposalLatexToPdf } from './pdfExport.js';
-import { answerAgentQuestion, generateProposal, startAgentSession } from './proposalGenerator.js';
-import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations } from './claudeRefine.js';
+import { answerAgentQuestion, generateProposal, startAgentSession, buildLatexFromOutput } from './proposalGenerator.js';
+import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference } from './claudeRefine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -125,6 +125,16 @@ app.post('/api/research/suggest-hypotheses', async (request, response) => {
   }
 });
 
+app.post('/api/research/fetch-doi', async (request, response) => {
+  try {
+    const doi = String(request.body?.doi || '').trim();
+    if (!doi) { response.status(400).json({ error: 'doi is required.' }); return; }
+    response.json({ reference: await fetchDoiReference(doi) });
+  } catch (error) {
+    response.status(500).json({ error: 'DOI fetch failed.', detail: error.message });
+  }
+});
+
 app.post('/api/research/generate-references', async (request, response) => {
   try {
     const { citationStyle = 'APA', references = [] } = request.body || {};
@@ -206,6 +216,16 @@ app.post('/api/refine/problem', async (request, response) => {
       error: 'Problem statement refinement failed.',
       detail: error instanceof Error ? error.message : String(error)
     });
+  }
+});
+
+app.post('/api/generate-from-output', async (request, response) => {
+  try {
+    const output = request.body || {};
+    const proposalLatex = buildLatexFromOutput(output);
+    response.json({ proposalLatex });
+  } catch (error) {
+    response.status(500).json({ error: 'LaTeX generation failed.', detail: error.message });
   }
 });
 

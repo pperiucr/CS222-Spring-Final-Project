@@ -90,6 +90,13 @@ export async function suggestResearchQuestion(problemDescription) {
   );
 }
 
+export async function fetchDoiReference(doi) {
+  return callGemini(
+    `You are a citation formatter. Given a DOI, return only the full formatted academic citation in IEEE style. Include authors, title, journal/conference, volume, pages, and year. Return only the citation text, nothing else.`,
+    `DOI: ${doi}`
+  );
+}
+
 export async function generateReferences(citationStyle, references) {
   const refList = references.map((r, i) => {
     if (r.bibtex.trim()) return `Entry ${i + 1} (BibTeX): ${r.bibtex}`;
