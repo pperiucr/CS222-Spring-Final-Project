@@ -74,9 +74,9 @@ const EMPTY_PROJECT_DETAILS = {
   supervisor: 'Prof. Yue Dong',
   degree_program: 'MS',
   research_area: 'AI/ML',
-  budget: '',
-  timeline: '',
-  team_size: '',
+  budget: '$10,000 USD',
+  timeline: '6 weeks',
+  team_size: '1',
   objectives: ['']
 };
 
@@ -105,6 +105,13 @@ function App() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [risksOpen, setRisksOpen] = useState(false);
   const [referencesOpen, setReferencesOpen] = useState(false);
+
+  const EMPTY_RESEARCH_PROBLEM_DATA = { problem_description: '', motivation: '', primary_question: '', hypotheses: [''] };
+  const [researchProblemData, setResearchProblemData] = useState(EMPTY_RESEARCH_PROBLEM_DATA);
+  const [methodologyData, setMethodologyData] = useState(null);
+  const [timelineActivities, setTimelineActivities] = useState(DEFAULT_ACTIVITIES);
+  const [risksData, setRisksData] = useState({ savedRisks: [] });
+  const [referencesData, setReferencesData] = useState({ savedRefs: [] });
   const [generatePopupOpen, setGeneratePopupOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
@@ -116,9 +123,9 @@ function App() {
   }
 
   const [proposalOutput, setProposalOutput] = useState({
-    research_title: '', objective: '', motivation: '', hypothesis: '',
+    research_title: '', objective: '', problem_statement: '', hypothesis: '', motivation: '',
     methodology_text: '', tools: '', contributions: '',
-    timeline_budget: '', risks_mitigation: '', references: ''
+    timeline_budget: '', timeline_structured: null, risks_mitigation: '', references: ''
   });
 
   function updateOutput(fields) {
@@ -530,8 +537,9 @@ function App() {
               {[
                 { label: '1a. Research Project Title', key: 'research_title',  full: false },
                 { label: '1b. Objective',              key: 'objective',        full: false },
-                { label: '2a. Problem Hypothesis',     key: 'hypothesis',       full: false },
-                { label: '2b. Motivation',             key: 'motivation',       full: false },
+                { label: '2a. Problem Statement',       key: 'problem_statement', full: false },
+                { label: '2b. Hypothesis',             key: 'hypothesis',        full: false },
+                { label: '2c. Motivation',             key: 'motivation',        full: true  },
                 { label: '3a. Methodology',            key: 'methodology_text', full: true  },
                 { label: '3b. Tools',                  key: 'tools',            full: false },
                 { label: '3c. Contributions',          key: 'contributions',    full: false },
@@ -560,6 +568,7 @@ function App() {
           {generatePopupOpen && (
             <GenerateFormatPopup
               proposalOutput={proposalOutput}
+              projectDetails={projectDetails}
               onClose={() => setGeneratePopupOpen(false)}
             />
           )}
@@ -579,10 +588,13 @@ function App() {
           )}
           {researchProblemOpen && (
             <ResearchProblemModal
+              initialData={researchProblemData}
               onSave={(data) => {
+                setResearchProblemData(data);
                 updateOutput({
-                  motivation: data.motivation || '',
-                  hypothesis: (data.hypotheses || []).filter(Boolean).map((h, i) => `${i + 1}. ${h}`).join('\n')
+                  problem_statement: data.problem_description || '',
+                  hypothesis: (data.hypotheses || []).filter(Boolean).map((h, i) => `${i + 1}. ${h}`).join('\n'),
+                  motivation: data.motivation || ''
                 });
                 markComplete('researchProblem');
                 setResearchProblemOpen(false);
@@ -592,7 +604,9 @@ function App() {
           )}
           {methodologyOpen && (
             <MethodologyModal
+              initialData={methodologyData}
               onSave={(data) => {
+                setMethodologyData(data);
                 updateOutput({
                   methodology_text: data.generated_methodology || '',
                   tools: (data.tools || []).join(', '),
@@ -606,10 +620,20 @@ function App() {
           )}
           {timelineOpen && (
             <TimelineModal
+              initialDuration={parseInt(projectDetails.timeline, 10) || 6}
+              initialTeamSize={projectDetails.team_size || '1'}
+              initialBudget={projectDetails.budget || '$10,000 USD'}
+              initialActivities={timelineActivities}
               onSave={(data) => {
-                const lines = (data.activities || []).map((a) => `${a.name}: ${a.months}`).join('\n');
-                const budget = projectDetails.budget ? `\nBudget: ${projectDetails.budget}` : '';
-                updateOutput({ timeline_budget: lines + budget });
+                setTimelineActivities(data.activities);
+                const teamLine = data.teamSize ? `Team Size: ${data.teamSize}` : '';
+                const activityLines = (data.activities || []).map((a) => `${a.name} | ${a.months}`).join('\n');
+                const budgetLine = data.budget ? `Budget: ${data.budget}` : '';
+                const text = [teamLine, activityLines, budgetLine].filter(Boolean).join('\n');
+                updateOutput({
+                  timeline_budget: text,
+                  timeline_structured: { activities: data.activities, teamSize: data.teamSize, budget: data.budget, duration: data.duration }
+                });
                 markComplete('timeline');
                 setTimelineOpen(false);
               }}
@@ -618,7 +642,9 @@ function App() {
           )}
           {risksOpen && (
             <RisksModal
+              initialSavedRisks={risksData.savedRisks}
               onSave={(data) => {
+                setRisksData({ savedRisks: data.risks || [] });
                 const text = (data.risks || []).map((r, i) =>
                   `${i + 1}. [${r.category}] ${r.description}\n   Likelihood: ${r.likelihood} | Impact: ${r.impact}\n   Mitigation: ${r.mitigation || 'N/A'}`
                 ).join('\n\n');
@@ -631,7 +657,9 @@ function App() {
           )}
           {referencesOpen && (
             <ReferencesModal
+              initialSavedRefs={referencesData.savedRefs}
               onSave={(data) => {
+                setReferencesData({ savedRefs: data.references || [] });
                 updateOutput({ references: data.formatted || '' });
                 markComplete('references');
                 setReferencesOpen(false);
@@ -1050,7 +1078,7 @@ function compactResult(result) {
   };
 }
 
-function GenerateFormatPopup({ proposalOutput, onClose }) {
+function GenerateFormatPopup({ proposalOutput, projectDetails, onClose }) {
   const [latex, setLatex] = useState('');
   const [localPdfUrl, setLocalPdfUrl] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -1066,7 +1094,7 @@ function GenerateFormatPopup({ proposalOutput, onClose }) {
     setGenerating(true);
     setError('');
     try {
-      const { proposalLatex } = await postJson('/api/generate-from-output', proposalOutput);
+      const { proposalLatex } = await postJson('/api/generate-from-output', { ...proposalOutput, projectDetails });
       setLatex(proposalLatex);
       const pdfResponse = await fetch('/api/export/pdf', {
         method: 'POST',
@@ -1201,10 +1229,10 @@ function ProposalStepper({ completed, onOpen }) {
   );
 }
 
-function ReferencesModal({ onSave, onClose }) {
+function ReferencesModal({ onSave, onClose, initialSavedRefs }) {
   const [doi, setDoi] = useState('');
   const [referenceText, setReferenceText] = useState('');
-  const [savedRefs, setSavedRefs] = useState([]);
+  const [savedRefs, setSavedRefs] = useState(initialSavedRefs || []);
   const [fetchBusy, setFetchBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -1312,7 +1340,13 @@ function ReferencesModal({ onSave, onClose }) {
           <button
             className="primary"
             type="button"
-            onClick={() => onSave({ formatted: savedRefs.map((r) => r.text).join('\n\n'), references: savedRefs })}
+            onClick={() => {
+              const allRefs = [
+                ...savedRefs,
+                ...(referenceText.trim() ? [{ id: Date.now(), text: referenceText.trim() }] : [])
+              ];
+              onSave({ formatted: allRefs.map((r) => r.text).join('\n\n'), references: allRefs });
+            }}
           >
             Save
           </button>
@@ -1328,8 +1362,8 @@ const IMPACT_OPTIONS = ['Low', 'Medium', 'High'];
 
 const EMPTY_RISK = { id: 0, category: 'Technical', description: '', likelihood: 'Low', impact: 'Medium', mitigation: '' };
 
-function RisksModal({ onSave, onClose }) {
-  const [savedRisks, setSavedRisks] = useState([]);
+function RisksModal({ onSave, onClose, initialSavedRisks }) {
+  const [savedRisks, setSavedRisks] = useState(initialSavedRisks || []);
   const [form, setForm] = useState({ ...EMPTY_RISK, id: 1 });
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -1504,14 +1538,16 @@ function RisksModal({ onSave, onClose }) {
 
 const DEFAULT_ACTIVITIES = [
   { name: 'Literature Review', months: 'Week 1' },
-  { name: 'Implementation', months: 'Week 2' },
-  { name: 'Experiments', months: 'Week 3' },
-  { name: 'Writing', months: 'Week 4' }
+  { name: 'Implementation', months: 'Week 2-3' },
+  { name: 'Experiments', months: 'Week 4-5' },
+  { name: 'Writing', months: 'Week 6' }
 ];
 
-function TimelineModal({ onSave, onClose }) {
-  const [duration, setDuration] = useState(4);
-  const [activities, setActivities] = useState(DEFAULT_ACTIVITIES);
+function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize = '1', initialBudget = '', initialActivities }) {
+  const [duration, setDuration] = useState(initialDuration);
+  const [teamSize, setTeamSize] = useState(initialTeamSize);
+  const [budget, setBudget] = useState(initialBudget);
+  const [activities, setActivities] = useState(initialActivities || DEFAULT_ACTIVITIES);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -1557,20 +1593,30 @@ function TimelineModal({ onSave, onClose }) {
         <div className="modal-body">
           {error && <p className="error-banner">{error}</p>}
 
-          <div className="timeline-duration-row">
-            <span className="modal-field-label">Research Duration</span>
-            <div className="timeline-duration-input">
-              <input
-                type="number"
-                min="1"
-                max="120"
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                style={{ width: '72px', textAlign: 'center' }}
-              />
-              <span className="timeline-months-label">Weeks</span>
+          <div className="modal-grid">
+            <div className="timeline-duration-row">
+              <span className="modal-field-label">Research Duration</span>
+              <div className="timeline-duration-input">
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  style={{ width: '72px', textAlign: 'center' }}
+                />
+                <span className="timeline-months-label">Weeks</span>
+              </div>
             </div>
+            <label>
+              Team Size
+              <input type="number" min="1" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} placeholder="1" style={{ width: '72px' }} />
+            </label>
           </div>
+          <label>
+            Budget
+            <input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. $5,000" />
+          </label>
 
           <hr className="rp-divider" />
 
@@ -1619,7 +1665,7 @@ function TimelineModal({ onSave, onClose }) {
 
         <div className="modal-footer">
           <button className="secondary" type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" type="button" onClick={() => onSave({ activities, duration })}>Save</button>
+          <button className="primary" type="button" onClick={() => onSave({ activities, duration, teamSize, budget })}>Save</button>
         </div>
       </div>
     </div>
@@ -1637,8 +1683,8 @@ const EMPTY_METHODOLOGY = {
   contributions: ['']
 };
 
-function MethodologyModal({ onSave, onClose }) {
-  const [form, setForm] = useState(EMPTY_METHODOLOGY);
+function MethodologyModal({ onSave, onClose, initialData }) {
+  const [form, setForm] = useState(initialData || EMPTY_METHODOLOGY);
   const [toolInput, setToolInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -1799,7 +1845,7 @@ function MethodologyModal({ onSave, onClose }) {
 
         <div className="modal-footer">
           <button className="secondary" type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" type="button" onClick={() => onSave({ generated_methodology: form.generated_methodology, tools: form.tools, contributions: form.contributions })}>Save</button>
+          <button className="primary" type="button" onClick={() => onSave(form)}>Save</button>
         </div>
       </div>
     </div>
@@ -1808,8 +1854,8 @@ function MethodologyModal({ onSave, onClose }) {
 
 const EMPTY_RESEARCH_PROBLEM = { problem_description: '', motivation: '', primary_question: '', hypotheses: [''] };
 
-function ResearchProblemModal({ onSave, onClose }) {
-  const [form, setForm] = useState(EMPTY_RESEARCH_PROBLEM);
+function ResearchProblemModal({ onSave, onClose, initialData }) {
+  const [form, setForm] = useState(initialData || EMPTY_RESEARCH_PROBLEM);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
@@ -1926,7 +1972,7 @@ function ResearchProblemModal({ onSave, onClose }) {
 
         <div className="modal-footer">
           <button className="secondary" type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" type="button" onClick={() => onSave({ motivation: form.motivation, hypotheses: form.hypotheses, primary_question: form.primary_question })}>Save</button>
+          <button className="primary" type="button" onClick={() => onSave({ problem_description: form.problem_description, motivation: form.motivation, hypotheses: form.hypotheses, primary_question: form.primary_question })}>Save</button>
         </div>
       </div>
     </div>

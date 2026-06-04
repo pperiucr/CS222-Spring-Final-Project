@@ -1070,15 +1070,47 @@ function extractNestedLatexString(value) {
     .replace(/\\\\/g, '\\');
 }
 
+function buildTimelineLatex(structured, fallbackText) {
+  if (!structured || !Array.isArray(structured.activities) || !structured.activities.length) {
+    return latexParagraph(fallbackText || '');
+  }
+
+  const rows = structured.activities
+    .map((a) => `${escapeLatex(a.name)} & ${escapeLatex(a.months)} \\\\\\\\`)
+    .join('\n\\hline\n');
+
+  const teamLine = structured.teamSize ? `\\item \\textbf{Team Size:} ${escapeLatex(String(structured.teamSize))}` : '';
+  const budgetLine = structured.budget ? `\\item \\textbf{Budget:} ${escapeLatex(structured.budget)}` : '';
+  const bullets = [teamLine, budgetLine].filter(Boolean);
+
+  return `\\begin{center}
+\\begin{tabular}{|l|c|}
+\\hline
+\\textbf{Activity} & \\textbf{Duration} \\\\\\\\
+\\hline
+${rows}
+\\hline
+\\end{tabular}
+\\end{center}
+${bullets.length ? `\n\\begin{itemize}\n${bullets.join('\n')}\n\\end{itemize}` : ''}`;
+}
+
 export function buildLatexFromOutput(output) {
   const title = clean(output.research_title) || 'Research Proposal';
+  const pd = output.projectDetails || {};
+  const studentName = clean(pd.student_name) || 'Prakash Perimbeti';
+  const supervisor = clean(pd.supervisor) || 'Prof. Yue Dong';
+  const university = clean(pd.university) || 'UC Riverside';
+  const department = clean(pd.department) || 'Computer Science';
   const objective = clean(output.objective);
-  const motivation = clean(output.motivation);
+  const problemStatement = clean(output.problem_statement);
   const hypothesis = clean(output.hypothesis);
+  const motivation = clean(output.motivation);
   const methodology = clean(output.methodology_text);
   const tools = clean(output.tools);
   const contributions = clean(output.contributions);
   const timeline = clean(output.timeline_budget);
+  const timelineStructured = output.timeline_structured || null;
   const risks = clean(output.risks_mitigation);
   const refs = clean(output.references);
 
@@ -1088,7 +1120,9 @@ export function buildLatexFromOutput(output) {
 \usepackage{enumitem}
 \setlist{nosep}
 \title{${escapeLatex(title)}}
-\author{}
+\author{${escapeLatex(studentName)}\\\\
+\small Department of ${escapeLatex(department)}, ${escapeLatex(university)}\\\\
+\small Supervisor: ${escapeLatex(supervisor)}}
 \date{}
 
 \begin{document}
@@ -1096,9 +1130,11 @@ export function buildLatexFromOutput(output) {
 
 ${objective ? `\\begin{abstract}\n${latexParagraph(objective)}\n\\end{abstract}\n` : ''}
 
-${motivation ? `\\section{Motivation}\n${latexParagraph(motivation)}\n` : ''}
+${problemStatement ? `\\section{Problem Statement}\n${latexParagraph(problemStatement)}\n` : ''}
 
-${hypothesis ? `\\section{Problem Hypothesis}\n${latexParagraph(hypothesis)}\n` : ''}
+${hypothesis ? `\\section{Hypothesis}\n${latexParagraph(hypothesis)}\n` : ''}
+
+${motivation ? `\\section{Motivation}\n${latexParagraph(motivation)}\n` : ''}
 
 ${methodology ? `\\section{Methodology}\n${latexParagraph(methodology)}\n` : ''}
 
@@ -1106,7 +1142,9 @@ ${tools ? `\\section{Tools}\n${latexParagraph(tools)}\n` : ''}
 
 ${contributions ? `\\section{Expected Contributions}\n${latexParagraph(contributions)}\n` : ''}
 
-${timeline ? `\\section{Timeline and Budget}\n${latexParagraph(timeline)}\n` : ''}
+${timelineStructured || timeline ? `\\section{Timeline}
+${buildTimelineLatex(timelineStructured, timeline)}
+` : ''}
 
 ${risks ? `\\section{Risks and Mitigation}\n${latexParagraph(risks)}\n` : ''}
 

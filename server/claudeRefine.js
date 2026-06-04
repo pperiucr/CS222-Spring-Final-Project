@@ -1,3 +1,29 @@
+const IS_MOCK = process.env.MOCK_LLM === 'true';
+
+const MOCK = {
+  titleAndIntro: {
+    research_title: 'Intelligent Network Operations via NLP Agents',
+    introduction: 'This research aims to design and evaluate an NLP-driven agent framework for automating network operations tasks. The proposed system will interpret natural language commands, map them to network control actions, and reduce manual intervention in complex infrastructure management. The work addresses a critical gap between human-expressed operational intent and machine-executable network policies.'
+  },
+  problemStatement: 'Modern network operations require skilled engineers to interpret alerts, diagnose faults, and execute remediation steps manually, leading to slow response times and human error. Existing automation tools lack the ability to understand high-level natural language intent and translate it into precise, context-aware network actions. This research proposes an NLP-driven agent that bridges the gap between natural language operational commands and automated network control.',
+  enhancedProblem: 'Contemporary network operations centers (NOCs) face a critical scalability challenge: the volume and complexity of network events far exceeds the capacity of human operators to respond in real time. Current rule-based automation systems are brittle and cannot interpret the nuanced, context-dependent intent expressed in natural language by network engineers. This research addresses the fundamental problem of translating free-form operational commands into precise, verifiable network control actions.',
+  motivation: 'Network infrastructure underpins every digital service, yet its management remains largely manual and error-prone. As networks grow in scale and complexity, the gap between human cognitive capacity and operational demands widens. An NLP-driven agent can dramatically reduce mean-time-to-resolution for network incidents, lower operational costs, and enable smaller teams to manage larger, more complex infrastructures — directly impacting service reliability and business continuity.',
+  primaryQuestion: 'How can a large language model-based agent accurately interpret natural language network operation commands and execute them with measurable reliability across heterogeneous network environments?',
+  hypotheses: [
+    'An NLP agent fine-tuned on network operation logs will achieve higher command-to-action accuracy than a zero-shot baseline model.',
+    'Integrating retrieval-augmented generation (RAG) with network topology context will reduce hallucination rate in generated configuration commands by at least 40%.',
+    'The proposed agent will reduce average incident response time by 30% compared to manual operator workflows in simulated NOC scenarios.'
+  ],
+  methodology: 'This study adopts an experimental research design combining dataset construction, model fine-tuning, and controlled simulation testing. A corpus of annotated network operation transcripts will be constructed from open NOC logs and synthetic examples. A transformer-based agent will be fine-tuned and evaluated against baseline models using intent accuracy, execution correctness, and latency metrics. Experiments will be conducted in a simulated network environment using GNS3 with representative enterprise topologies.',
+  timelineActivities: [
+    { name: 'Literature Review & Dataset Collection', months: 'Week 1' },
+    { name: 'Model Design & Fine-Tuning', months: 'Week 2' },
+    { name: 'Simulation Setup & Experiments', months: 'Week 3' },
+    { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
+  ],
+  reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.'
+};
+
 const PROBLEM_SYSTEM_PROMPT = `You are a research proposal writing expert. Take a rough, informal research idea and rewrite it as a crisp, sharp, professional problem statement.
 
 The problem statement must be:
@@ -70,6 +96,7 @@ async function callGeminiJson(systemPrompt, userText) {
 }
 
 export async function enhanceProblemStatement(problemDescription) {
+  if (IS_MOCK) return MOCK.enhancedProblem;
   return callGemini(
     `You are a research proposal expert. Enhance the given research problem description to be clear, specific, and academically rigorous. Keep it 3-5 sentences. Return only the enhanced text, nothing else.`,
     `Research problem: ${problemDescription}`
@@ -77,6 +104,7 @@ export async function enhanceProblemStatement(problemDescription) {
 }
 
 export async function generateMotivation(problemDescription) {
+  if (IS_MOCK) return MOCK.motivation;
   return callGemini(
     `You are a research proposal expert. Write a compelling motivation paragraph (4-6 sentences) for the given research problem. Explain why this problem matters, its real-world impact, and why it needs to be solved now. Return only the motivation paragraph, nothing else.`,
     `Research problem: ${problemDescription}`
@@ -84,6 +112,7 @@ export async function generateMotivation(problemDescription) {
 }
 
 export async function suggestResearchQuestion(problemDescription) {
+  if (IS_MOCK) return MOCK.primaryQuestion;
   return callGemini(
     `You are a research proposal expert. Generate one clear, focused primary research question for the given research problem. It should be specific, measurable, and answerable through research. Return only the question, nothing else.`,
     `Research problem: ${problemDescription}`
@@ -91,6 +120,7 @@ export async function suggestResearchQuestion(problemDescription) {
 }
 
 export async function fetchDoiReference(doi) {
+  if (IS_MOCK) return MOCK.reference;
   return callGemini(
     `You are a citation formatter. Given a DOI, return only the full formatted academic citation in IEEE style. Include authors, title, journal/conference, volume, pages, and year. Return only the citation text, nothing else.`,
     `DOI: ${doi}`
@@ -98,6 +128,7 @@ export async function fetchDoiReference(doi) {
 }
 
 export async function generateReferences(citationStyle, references) {
+  if (IS_MOCK) return `[1] ${MOCK.reference}`;
   const refList = references.map((r, i) => {
     if (r.bibtex.trim()) return `Entry ${i + 1} (BibTeX): ${r.bibtex}`;
     if (r.doi.trim()) return `Entry ${i + 1} (DOI): ${r.doi}`;
@@ -111,6 +142,7 @@ export async function generateReferences(citationStyle, references) {
 }
 
 export async function validateCitations(citationStyle, references) {
+  if (IS_MOCK) return `Entry 1: Valid — DOI format correct and citation well-formed.\nEntry 2: Valid — BibTeX fields complete.`;
   const refList = references.map((r, i) => {
     if (r.bibtex.trim()) return `Entry ${i + 1} (BibTeX): ${r.bibtex}`;
     if (r.doi.trim()) return `Entry ${i + 1} (DOI): ${r.doi}`;
@@ -124,6 +156,7 @@ export async function validateCitations(citationStyle, references) {
 }
 
 export async function structureRisk(category, description) {
+  if (IS_MOCK) return `[${category}] ${description.trim() || 'The identified risk poses a potential threat to project timelines and data quality if not addressed proactively through systematic mitigation strategies.'}`;
   return callGemini(
     `You are a research proposal expert. Rewrite the given risk description to be clear, specific, and professionally framed for a research proposal. 2-3 sentences max. Return only the rewritten description, nothing else.`,
     `Risk category: ${category}\nRisk description: ${description}`
@@ -131,6 +164,7 @@ export async function structureRisk(category, description) {
 }
 
 export async function suggestMitigation(category, description, likelihood, impact) {
+  if (IS_MOCK) return `To mitigate this ${likelihood.toLowerCase()}-likelihood, ${impact.toLowerCase()}-impact ${category.toLowerCase()} risk, implement a proactive monitoring protocol with weekly checkpoints. Maintain a fallback dataset and document all assumptions explicitly. Allocate a 15% timeline buffer to absorb unexpected delays.`;
   return callGemini(
     `You are a research proposal expert. Suggest a concrete, actionable mitigation strategy for the given research risk. 2-4 sentences. Return only the mitigation text, nothing else.`,
     `Risk category: ${category}\nRisk: ${description}\nLikelihood: ${likelihood}\nImpact: ${impact}`
@@ -138,6 +172,7 @@ export async function suggestMitigation(category, description, likelihood, impac
 }
 
 export async function generateTimeline(durationMonths, activities) {
+  if (IS_MOCK) return MOCK.timelineActivities.slice(0, activities.length);
   const activityList = activities.map((a) => `- ${a.name}: ${a.months}`).join('\n');
   const result = await callGeminiJson(
     `You are a research proposal expert. Given a research duration in weeks and a list of activities, generate a realistic, well-paced timeline. Return strict JSON:
@@ -153,6 +188,7 @@ Distribute all activities across the full duration. Keep existing activity names
 }
 
 export async function generateMethodology(researchType, dataSource, tools, experimentDescription) {
+  if (IS_MOCK) return MOCK.methodology;
   return callGemini(
     `You are a research proposal expert. Write a clear, structured methodology section (4-6 sentences) for a research proposal. Cover the approach, data collection, tools used, and how the experiment is designed. Professional academic tone. Return only the methodology text, nothing else.`,
     `Research type: ${researchType}\nData source: ${dataSource}\nTools: ${tools.join(', ')}\nExperiment description: ${experimentDescription}`
@@ -160,6 +196,7 @@ export async function generateMethodology(researchType, dataSource, tools, exper
 }
 
 export async function suggestHypotheses(problemDescription, primaryQuestion) {
+  if (IS_MOCK) return MOCK.hypotheses;
   const result = await callGeminiJson(
     `You are a research proposal expert. Generate 2-3 concise, testable hypotheses for the given research problem and question. Return strict JSON: { "hypotheses": ["...", "...", "..."] }`,
     `Research problem: ${problemDescription}\nPrimary question: ${primaryQuestion}`
@@ -168,6 +205,7 @@ export async function suggestHypotheses(problemDescription, primaryQuestion) {
 }
 
 export async function refineTitleAndIntro(roughIdea) {
+  if (IS_MOCK) return MOCK.titleAndIntro;
   const parsed = await callGeminiJson(TITLE_INTRO_SYSTEM_PROMPT, `Rough idea: ${roughIdea}`);
   return {
     research_title: String(parsed.research_title || '').trim(),
@@ -176,5 +214,6 @@ export async function refineTitleAndIntro(roughIdea) {
 }
 
 export async function refineProblemStatement(roughIdea) {
+  if (IS_MOCK) return MOCK.problemStatement;
   return callGemini(PROBLEM_SYSTEM_PROMPT, `Rough idea: ${roughIdea}`);
 }
