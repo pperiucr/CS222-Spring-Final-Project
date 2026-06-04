@@ -1940,6 +1940,12 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
   const [llmHelping, setLlmHelping] = useState(false);
   const [llmError, setLlmError] = useState('');
 
+  function defaultStyle(field) {
+    return form[field] === EMPTY_PROJECT_DETAILS[field]
+      ? { color: '#aebfc6' }
+      : { color: '#202124' };
+  }
+
   async function handleLlmHelp() {
     const trimmed = form.rough_idea.trim();
     if (!trimmed) return;
@@ -2050,19 +2056,19 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
           <div className="modal-grid">
             <label>
               Student Name
-              <input value={form.student_name} onChange={(e) => setField('student_name', e.target.value)} placeholder="Jane Doe" />
+              <input style={defaultStyle('student_name')} value={form.student_name} onChange={(e) => setField('student_name', e.target.value)} placeholder="Jane Doe" />
             </label>
             <label>
               Supervisor
-              <input value={form.supervisor} onChange={(e) => setField('supervisor', e.target.value)} placeholder="Prof. John Smith" />
+              <input style={defaultStyle('supervisor')} value={form.supervisor} onChange={(e) => setField('supervisor', e.target.value)} placeholder="Prof. John Smith" />
             </label>
             <label>
               University
-              <input value={form.university} onChange={(e) => setField('university', e.target.value)} placeholder="UC Riverside" />
+              <input style={defaultStyle('university')} value={form.university} onChange={(e) => setField('university', e.target.value)} placeholder="UC Riverside" />
             </label>
             <label>
               Department
-              <input value={form.department} onChange={(e) => setField('department', e.target.value)} placeholder="Computer Science" />
+              <input style={defaultStyle('department')} value={form.department} onChange={(e) => setField('department', e.target.value)} placeholder="Computer Science" />
             </label>
           </div>
 
