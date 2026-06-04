@@ -74,7 +74,7 @@ const EMPTY_PROJECT_DETAILS = {
   supervisor: 'Prof. Yue Dong',
   degree_program: 'MS',
   research_area: 'AI/ML',
-  budget: '$10,000 USD',
+  budget: '$10,000',
   timeline: '6 weeks',
   team_size: '1',
   objectives: ['']
@@ -624,7 +624,7 @@ function App() {
             <TimelineModal
               initialDuration={parseInt(projectDetails.timeline, 10) || 6}
               initialTeamSize={projectDetails.team_size || '1'}
-              initialBudget={projectDetails.budget || '$10,000 USD'}
+              initialBudget={projectDetails.budget || '$10,000'}
               initialActivities={timelineActivities}
               onSave={(data) => {
                 setTimelineActivities(data.activities);

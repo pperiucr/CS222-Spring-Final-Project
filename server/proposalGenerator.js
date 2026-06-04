@@ -1070,6 +1070,17 @@ function extractNestedLatexString(value) {
     .replace(/\\\\/g, '\\');
 }
 
+function buildNumberedListLatex(text) {
+  const lines = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const items = lines
+    .map((line) => line.replace(/^\d+\.\s*/, '').trim())
+    .filter(Boolean);
+
+  if (!items.length) return '';
+
+  return `\\begin{enumerate}\n${items.map((item) => `\\item ${escapeLatex(item)}`).join('\n')}\n\\end{enumerate}`;
+}
+
 function buildTimelineLatex(structured, fallbackText) {
   if (!structured || !Array.isArray(structured.activities) || !structured.activities.length) {
     return latexParagraph(fallbackText || '');
@@ -1122,10 +1133,7 @@ export function buildLatexFromOutput(output) {
 \usepackage{enumitem}
 \setlist{nosep}
 \title{${escapeLatex(title)}}
-\author{${escapeLatex(studentName)} (${escapeLatex(degreeProgram)})\\\\
-\small Department of ${escapeLatex(department)}, ${escapeLatex(university)}\\\\
-\small Research Area: ${escapeLatex(researchArea)}\\\\
-\small Supervisor: ${escapeLatex(supervisor)}}
+\author{\small ${escapeLatex(studentName)} (${escapeLatex(degreeProgram)}) $|$ ${escapeLatex(department)}, ${escapeLatex(university)} $|$ ${escapeLatex(researchArea)} $|$ Supervisor: ${escapeLatex(supervisor)}}
 \date{}
 
 \begin{document}
@@ -1135,7 +1143,7 @@ ${objective ? `\\begin{abstract}\n${latexParagraph(objective)}\n\\end{abstract}\
 
 ${problemStatement ? `\\section{Problem Statement}\n${latexParagraph(problemStatement)}\n` : ''}
 
-${hypothesis ? `\\section{Hypothesis}\n${latexParagraph(hypothesis)}\n` : ''}
+${hypothesis ? `\\section{Hypothesis}\n${buildNumberedListLatex(hypothesis)}\n` : ''}
 
 ${motivation ? `\\section{Motivation}\n${latexParagraph(motivation)}\n` : ''}
 
