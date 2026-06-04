@@ -525,6 +525,8 @@ function App() {
             )}
             <div className="proposal-title-meta">
               <span><strong>Student:</strong> {projectDetails.student_name || EMPTY_PROJECT_DETAILS.student_name}</span>
+              <span><strong>Degree:</strong> {projectDetails.degree_program || EMPTY_PROJECT_DETAILS.degree_program}</span>
+              <span><strong>Research Area:</strong> {projectDetails.research_area || EMPTY_PROJECT_DETAILS.research_area}</span>
               <span><strong>Supervisor:</strong> {projectDetails.supervisor || EMPTY_PROJECT_DETAILS.supervisor}</span>
               <span><strong>University:</strong> {projectDetails.university || EMPTY_PROJECT_DETAILS.university}</span>
               <span><strong>Department:</strong> {projectDetails.department || EMPTY_PROJECT_DETAILS.department}</span>

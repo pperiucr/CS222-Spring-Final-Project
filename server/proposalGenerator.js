@@ -1102,6 +1102,8 @@ export function buildLatexFromOutput(output) {
   const supervisor = clean(pd.supervisor) || 'Prof. Yue Dong';
   const university = clean(pd.university) || 'UC Riverside';
   const department = clean(pd.department) || 'Computer Science';
+  const degreeProgram = clean(pd.degree_program) || 'MS';
+  const researchArea = clean(pd.research_area) || 'AI/ML';
   const objective = clean(output.objective);
   const problemStatement = clean(output.problem_statement);
   const hypothesis = clean(output.hypothesis);
@@ -1120,8 +1122,9 @@ export function buildLatexFromOutput(output) {
 \usepackage{enumitem}
 \setlist{nosep}
 \title{${escapeLatex(title)}}
-\author{${escapeLatex(studentName)}\\\\
+\author{${escapeLatex(studentName)} (${escapeLatex(degreeProgram)})\\\\
 \small Department of ${escapeLatex(department)}, ${escapeLatex(university)}\\\\
+\small Research Area: ${escapeLatex(researchArea)}\\\\
 \small Supervisor: ${escapeLatex(supervisor)}}
 \date{}
 
