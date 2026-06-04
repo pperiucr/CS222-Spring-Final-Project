@@ -119,7 +119,50 @@ export async function suggestResearchQuestion(problemDescription) {
   );
 }
 
+function formatCrossRefCitation(work) {
+  const authors = (work.author || []).map((a) =>
+    `${a.given ? a.given.charAt(0) + '. ' : ''}${a.family || ''}`.trim()
+  ).filter(Boolean);
+
+  const authorStr = authors.length > 3
+    ? `${authors.slice(0, 3).join(', ')}, et al.`
+    : authors.join(', ');
+
+  const title = work.title?.[0] || '';
+  const journal = work['container-title']?.[0] || work.publisher || '';
+  const year = work.published?.['date-parts']?.[0]?.[0] || work['published-print']?.['date-parts']?.[0]?.[0] || '';
+  const volume = work.volume || '';
+  const issue = work.issue || '';
+  const pages = work.page || '';
+  const doiStr = work.DOI || '';
+
+  const parts = [];
+  if (authorStr) parts.push(authorStr);
+  if (title) parts.push(`"${title}"`);
+  if (journal) parts.push(journal);
+  if (volume) parts.push(`vol. ${volume}`);
+  if (issue) parts.push(`no. ${issue}`);
+  if (pages) parts.push(`pp. ${pages}`);
+  if (year) parts.push(String(year));
+  if (doiStr) parts.push(`doi: ${doiStr}`);
+
+  return parts.join(', ') + '.';
+}
+
 export async function fetchDoiReference(doi) {
+  // Always use CrossRef API — free, accurate, no API key needed
+  try {
+    const response = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi.trim())}`, {
+      headers: { 'User-Agent': 'ResearchProposalAgent/1.0 (mailto:sachinperimbeti123@gmail.com)' }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return formatCrossRefCitation(data.message);
+    }
+  } catch (_) { /* fall through */ }
+
+  // Fall back to Gemini if CrossRef fails
   if (IS_MOCK) return MOCK.reference;
   return callGemini(
     `You are a citation formatter. Given a DOI, return only the full formatted academic citation in IEEE style. Include authors, title, journal/conference, volume, pages, and year. Return only the citation text, nothing else.`,

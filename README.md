@@ -1,29 +1,75 @@
-# Three-Stage Final Project: Research Proposal Agent
+# Research Proposal Agent
 
-## Goal
+A full-stack web app that guides a researcher through writing a structured research proposal using a 6-step workflow assisted by an LLM. It generates a LaTeX document and compiles it to PDF.
 
-Build and evaluate a research proposal workflow. The project is not just about producing one polished PDF. It asks you to show that you understand how strong proposals are written, how an agent can support that process, and how the final proposal can be evaluated.
+## What It Does
 
-You will complete the final project in three stages:
+The app provides two parallel ways to build a proposal:
 
-1. **Stage 1: Initial Agent + Workflow Design**
-   - Build an initial agent or prototype through vibe coding.
-   - Research proposal-writing guides, examples, and agent workflow patterns.
-   - Submit a 5-minute presentation video of your workflow design.
-   - Attend the mandatory in-person presentation session to show your motivation, idea, and goal.
-   - A polished proposal is not required in this stage.
+**Primary: 6-step guided stepper**
+Each step opens a modal form. Filling in and saving a step populates the corresponding section of the "Research Proposal Draft" panel. LLM-powered helper buttons appear inside each modal.
 
-2. **Stage 2: Refined Agent + Workflow Usage**
-   - Refine the Stage 1 agent or workflow.
-   - Show how the agent/workflow is used to generate, revise, and evaluate proposal content.
-   - Submit usage evidence such as logs, transcripts, screenshots, and review artifacts.
+| Step | What You Fill In | LLM Helpers Available |
+|---|---|---|
+| 1. Project Details | Title, student/supervisor info, degree, research area, budget, objectives | Generate title and objective from a rough idea |
+| 2. Research Problem | Problem description, motivation, primary question, hypotheses | Enhance problem statement, generate motivation, suggest question, suggest hypotheses |
+| 3. Methodology | Research type, data source, tools, experiment design, contributions | Generate full methodology paragraph |
+| 4. Timeline | Duration (weeks), team size, budget, activity list | Generate a distributed timeline |
+| 5. Risks & Mitigation | Risk category, description, likelihood, impact, mitigation | AI-structure a risk description, suggest a mitigation strategy |
+| 6. References | DOI lookup (via CrossRef) or manual entry | CrossRef public API; LLM fallback if CrossRef fails |
 
-3. **Stage 3: Final Proposal**
-   - Submit the final `proposal.pdf`.
-   - The proposal is graded separately for research proposal quality.
-   - The proposal should not be framed as a short course implementation report; the course deadline and the proposed research timeline are separate.
+**Secondary: LLM suggestion workflow**
+Enter a rough idea and click "Structure Idea" to have the LLM return suggested field values and decision cards. Accept or skip suggestions, submit custom notes, then draft a proposal from the assembled fields.
 
-If you use vibe coding only to directly produce a proposal, you can receive Stage 3 proposal credit. However, Stage 2 credit requires evidence that your own workflow or agent guided the proposal creation process.
+**Generate Proposal**
+The "Generate Proposal" button assembles all draft section content into a LaTeX document and attempts to compile it to PDF via Tectonic. A preview popup shows the PDF inline with download buttons for PDF and LaTeX source.
+
+## How to Run
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5174`
+
+The API server listens on `http://127.0.0.1:8787`.
+
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your API key:
+
+```bash
+cp .env.example .env
+```
+
+```text
+LLM_PROVIDER=gemini
+LLM_API_URL=https://generativelanguage.googleapis.com/v1beta
+LLM_API_KEY=your_key_here
+LLM_MODEL=gemini-2.5-flash
+```
+
+Without `LLM_API_KEY` and `LLM_MODEL` the app runs in local-fallback mode — all proposal generation uses deterministic templates and no API calls are made.
+
+Set `MOCK_LLM=true` to short-circuit the per-section modal helpers (`claudeRefine.js`) with hard-coded sample responses. Useful for UI development without an API key.
+
+## PDF Generation Requirement
+
+Tectonic must be installed and available on `PATH` for PDF compilation to work. If it is not installed, the Generate Proposal popup will show a hint to download the LaTeX source instead and compile manually.
+
+Install Tectonic: https://tectonic-typesetting.github.io/
+
+## How to Use (6-Step Workflow)
+
+1. Open the app and click **Project Details** (step 1 in the stepper). Fill in your research title, student info, and objectives. Use "LLM Generate" to draft a title and objective from a rough idea. Click Save.
+2. Click **Research Problem** (step 2). Describe the problem, then use the AI buttons to enhance it, generate a motivation paragraph, and suggest a research question and hypotheses. Click Save.
+3. Click **Methodology** (step 3). Select a research type, describe your data source, add tools as tags, and describe the experiment. Click "Generate Methodology" to produce a paragraph. Add expected contributions. Click Save.
+4. Click **Timeline** (step 4). Set the duration in weeks and list your activities. Use "Generate Timeline" to distribute activities across the duration. Click Save.
+5. Click **Risks & Mitigation** (step 5). Add one or more risks with category, description, likelihood, and impact. Use "AI Structure Risk" and "AI Suggest Mitigation" to refine each entry. Click Save.
+6. Click **References** (step 6). Enter a DOI and click "Fetch" to auto-populate a formatted citation from CrossRef, or type one manually. Add as many references as needed. Click Save.
+7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly.
+8. Click **Generate Proposal** to produce LaTeX and a compiled PDF. Download either format.
 
 ## Deadlines And Submission Requirements
 
@@ -34,51 +80,6 @@ All deadlines use Pacific Time.
 | Stage 1: Initial Agent + Workflow Design | Friday, June 5, 2026, 11:59 PM | 5-minute presentation video, initial agent/prototype artifact, optional screenshots or interaction trace. | Stage 1 is graded from the video. The in-person presentation is mandatory but not separately graded; it is for showing motivation, ideas, goals, and peer feedback. Late submissions accepted until Sunday, June 7, 2026, 11:59 PM with a 20% penalty. |
 | Stage 2: Refined Agent + Workflow Usage | Friday, June 12, 2026, 11:59 PM | Refined agent/workflow, `workflow_usage.md`, run evidence, `AI_USAGE.md`. | Late submissions accepted until Sunday, June 14, 2026, 11:59 PM with a 20% penalty. |
 | Stage 3: Final Proposal | Friday, June 12, 2026, 11:59 PM | `proposal.pdf`, proposal source, references or source notes, figure/diagram source if applicable. | Late submissions accepted until Sunday, June 14, 2026, 11:59 PM with a 20% penalty. |
-
-## Optional Starter App
-
-This repository includes a small starter app to illustrate one possible proposal-agent workflow. It is optional: you may use it, replace it, or ignore it.
-
-Example starter screens:
-
-![Starter app workflow screen](docs/assets/starter-app-workflow.png)
-
-![Starter app proposal preview screen](docs/assets/starter-app-proposal-preview.png)
-
-To run the starter:
-
-```bash
-npm install
-npm run dev
-```
-
-Open:
-
-```text
-http://127.0.0.1:5174
-```
-
-We encourage students to start with the [Gemini API free tier](https://ai.google.dev/gemini-api/docs/pricing). If the free tier is not enough for your project, email the TA at <yfu093@ucr.edu> to request additional API access. Keep all API keys out of GitHub and document your setup.
-
-## Resources
-
-Vibe coding tools:
-
-- [Cursor](https://cursor.com/en/students). Students can apply for a student account with their `.edu` email; contact Cursor through the official student page if you need help with the application.
-- [GitHub Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/enable-copilot/set-up-for-students)
-- [Google Gemini API](https://ai.google.dev/gemini-api/docs/pricing)
-- [Google Gemini Code Assist](https://developers.google.com/gemini-code-assist/resources/faqs)
-- [Claude / Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
-- [Windsurf](https://windsurf.com/windsurf/students)
-- [Cline](https://docs.cline.bot/introduction/overview) / [Roo Code](https://roocode.com/)
-- [ChatGPT](https://chatgpt.com/)
-- [v0 by Vercel](https://v0.dev/)
-
-Tool availability, student plans, and free tiers can change. Check the official pages before relying on a specific plan.
-
-Proposal-agent inspiration:
-
-- [Civio](https://www.civio.ai/) shows how proposal and compliance workflows can become real products. A strong class project can be more than a demo; it can point toward a startup-style opportunity if it solves a real workflow pain.
 
 ## Stage 1 Deliverables
 
