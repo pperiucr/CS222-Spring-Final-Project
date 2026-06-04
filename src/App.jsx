@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  BotMessageSquare,
   CheckCircle2,
   ClipboardCheck,
   Download,
@@ -52,14 +53,6 @@ const PROJECT_FIELDS = [
   ['references', 'Sources']
 ];
 
-const STAGES = [
-  ['1', 'Extract', 'LLM turns the rough idea into structured proposal data'],
-  ['2', 'Decide', 'You choose or edit candidate framings'],
-  ['3', 'Assemble', 'Accepted fields become project state'],
-  ['4', 'Draft', 'LLM writes proposal artifacts'],
-  ['5', 'Review', 'Matrix and critique check weak spots']
-];
-
 const TABS = [
   ['pdf', FileText, 'PDF'],
   ['latex', FileText, 'LaTeX'],
@@ -72,19 +65,18 @@ const MEMORY_KEY = 'proposal-agent-final-project-memory-v1';
 const RESEARCH_AREAS = ['AI/ML', 'Systems', 'Security', 'HCI', 'Networking', 'Databases', 'Theory', 'Bioinformatics', 'Other'];
 
 const EMPTY_PROJECT_DETAILS = {
+  rough_idea: '',
   research_title: '',
+  introduction: '',
   student_name: '',
   university: '',
   department: '',
   supervisor: '',
   degree_program: 'MS',
   research_area: 'AI/ML',
-  keywords: [],
-  project_name: '',
   budget: '',
   timeline: '',
   team_size: '',
-  special_requirements: '',
   objectives: ['']
 };
 
@@ -108,6 +100,29 @@ function App() {
   const [refining, setRefining] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [projectDetails, setProjectDetails] = useState(EMPTY_PROJECT_DETAILS);
+  const [researchProblemOpen, setResearchProblemOpen] = useState(false);
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [risksOpen, setRisksOpen] = useState(false);
+  const [referencesOpen, setReferencesOpen] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState({
+    projectDetails: false, researchProblem: false, methodology: false,
+    timeline: false, risks: false, references: false
+  });
+
+  function markComplete(key) {
+    setCompletedSteps((prev) => ({ ...prev, [key]: true }));
+  }
+
+  const [proposalOutput, setProposalOutput] = useState({
+    research_title: '', objective: '', motivation: '', hypothesis: '',
+    methodology_text: '', tools: '', contributions: '',
+    timeline_budget: '', risks_mitigation: '', references: ''
+  });
+
+  function updateOutput(fields) {
+    setProposalOutput((prev) => ({ ...prev, ...fields }));
+  }
 
   const matrixStats = useMemo(() => {
     const rows = result?.complianceMatrix || [];
@@ -197,12 +212,24 @@ function App() {
       const problemSuggestion = suggestions.find((s) => s.field === 'problem');
       const titleSuggestion = suggestions.find((s) => s.field === 'title');
 
+      const generatedTitle = data.project.title || titleSuggestion?.value || '';
+      const generatedProblem = data.project.problem || problemSuggestion?.value || '';
+
       setProject({
         ...EMPTY_PROJECT,
         ...data.project,
-        title: data.project.title || titleSuggestion?.value || '',
-        problem: data.project.problem || problemSuggestion?.value || ''
+        title: generatedTitle,
+        problem: generatedProblem
       });
+
+      if (generatedTitle || generatedProblem) {
+        setProjectDetails((prev) => ({
+          ...prev,
+          research_title: generatedTitle || prev.research_title,
+          introduction: generatedProblem || prev.introduction
+        }));
+      }
+
       setFieldSuggestions(suggestions);
       setDecisions(data.decisions || []);
       setQuestions(data.questions || []);
@@ -471,57 +498,139 @@ function App() {
 
       <section className="workspace single-pane">
         <section className="workflow-artifact">
-          <div className="project-details-bar">
-            <span className="project-details-label">Click to add back research project information:</span>
-            <button className="secondary" type="button" onClick={() => setProjectDetailsOpen(true)}>
-              <FolderOpen size={18} aria-hidden="true" />
-              Project Details
-            </button>
-            {projectDetails.research_title && (
-              <span className="project-details-pill">
-                {[projectDetails.research_title, projectDetails.student_name].filter(Boolean).join(' · ')}
-              </span>
-            )}
+
+          <ProposalStepper
+            completed={completedSteps}
+            onOpen={(key) => {
+              if (key === 'projectDetails') setProjectDetailsOpen(true);
+              if (key === 'researchProblem') setResearchProblemOpen(true);
+              if (key === 'methodology') setMethodologyOpen(true);
+              if (key === 'timeline') setTimelineOpen(true);
+              if (key === 'risks') setRisksOpen(true);
+              if (key === 'references') setReferencesOpen(true);
+            }}
+          />
+
+          <div className="proposal-output-section">
+            <h2 className="proposal-output-heading">Research Proposal Draft</h2>
+            <div className="proposal-output-grid">
+              {[
+                { label: '1. Research Project Title', key: 'research_title', rows: 2 },
+                { label: '2. Objective',              key: 'objective',       rows: 4 },
+                { label: '3. Motivation',             key: 'motivation',      rows: 4 },
+                { label: '4. Hypothesis',             key: 'hypothesis',      rows: 4 },
+                { label: '5. Methodology',            key: 'methodology_text',rows: 5 },
+                { label: '6. Tools',                  key: 'tools',           rows: 3 },
+                { label: '7. Contributions',          key: 'contributions',   rows: 4 },
+                { label: '8. Timeline and Budget',    key: 'timeline_budget', rows: 5 },
+                { label: '9. Risks and Mitigation',   key: 'risks_mitigation',rows: 5 },
+                { label: '10. References',            key: 'references',      rows: 5 },
+              ].map(({ label, key, rows }) => (
+                <label key={key} className="proposal-output-field">
+                  <span className="proposal-output-label">{label}</span>
+                  <textarea
+                    rows={rows}
+                    value={proposalOutput[key]}
+                    onChange={(e) => updateOutput({ [key]: e.target.value })}
+                    placeholder={`${label} will appear here after saving the relevant section above...`}
+                  />
+                </label>
+              ))}
+            </div>
           </div>
 
           {projectDetailsOpen && (
             <ProjectDetailsModal
               details={projectDetails}
-              onSave={(saved) => { setProjectDetails(saved); setProjectDetailsOpen(false); }}
+              onSave={(saved) => {
+                setProjectDetails(saved);
+                if (saved.rough_idea) setTopicInput(saved.rough_idea);
+                updateOutput({ research_title: saved.research_title || '', objective: saved.introduction || '' });
+                markComplete('projectDetails');
+                setProjectDetailsOpen(false);
+              }}
               onClose={() => setProjectDetailsOpen(false)}
             />
           )}
+          {researchProblemOpen && (
+            <ResearchProblemModal
+              onSave={(data) => {
+                updateOutput({
+                  motivation: data.motivation || '',
+                  hypothesis: (data.hypotheses || []).filter(Boolean).map((h, i) => `${i + 1}. ${h}`).join('\n')
+                });
+                markComplete('researchProblem');
+                setResearchProblemOpen(false);
+              }}
+              onClose={() => setResearchProblemOpen(false)}
+            />
+          )}
+          {methodologyOpen && (
+            <MethodologyModal
+              onSave={(data) => {
+                updateOutput({
+                  methodology_text: data.generated_methodology || '',
+                  tools: (data.tools || []).join(', '),
+                  contributions: (data.contributions || []).filter(Boolean).map((c, i) => `${i + 1}. ${c}`).join('\n')
+                });
+                markComplete('methodology');
+                setMethodologyOpen(false);
+              }}
+              onClose={() => setMethodologyOpen(false)}
+            />
+          )}
+          {timelineOpen && (
+            <TimelineModal
+              onSave={(data) => {
+                const lines = (data.activities || []).map((a) => `${a.name}: ${a.months}`).join('\n');
+                const budget = projectDetails.budget ? `\nBudget: ${projectDetails.budget}` : '';
+                updateOutput({ timeline_budget: lines + budget });
+                markComplete('timeline');
+                setTimelineOpen(false);
+              }}
+              onClose={() => setTimelineOpen(false)}
+            />
+          )}
+          {risksOpen && (
+            <RisksModal
+              onSave={(data) => {
+                const text = (data.risks || []).map((r, i) =>
+                  `${i + 1}. [${r.category}] ${r.description}\n   Likelihood: ${r.likelihood} | Impact: ${r.impact}\n   Mitigation: ${r.mitigation || 'N/A'}`
+                ).join('\n\n');
+                updateOutput({ risks_mitigation: text });
+                markComplete('risks');
+                setRisksOpen(false);
+              }}
+              onClose={() => setRisksOpen(false)}
+            />
+          )}
+          {referencesOpen && (
+            <ReferencesModal
+              onSave={(data) => {
+                updateOutput({ references: data.formatted || '' });
+                markComplete('references');
+                setReferencesOpen(false);
+              }}
+              onClose={() => setReferencesOpen(false)}
+            />
+          )}
 
-          <div className="topic-launch">
-            <label htmlFor="project-topic">
-              Rough Idea
-              <input
-                id="project-topic"
-                value={topicInput}
-                onChange={(event) => setTopicInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') startAgent();
-                }}
-                placeholder="Example: Agent for citation-grounded literature review"
-              />
-            </label>
-            <div className="actions framework-actions">
-              <button className="primary" disabled={!topicInput.trim() || status !== 'idle'} onClick={startAgent} type="button">
-                {status === 'starting' ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
-                Structure Idea
-              </button>
-              <button className="secondary" disabled={status !== 'idle'} onClick={startSampleAgent} type="button">
-                <Sparkles size={18} aria-hidden="true" />
-                Sample
-              </button>
-              <button className="secondary" disabled={!topicInput.trim() || refining || status !== 'idle'} onClick={refineProblem} type="button">
-                {refining ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Wand2 size={18} aria-hidden="true" />}
-                Refine to Problem
-              </button>
-              <button className="secondary icon-button" onClick={reset} type="button" aria-label="Reset">
-                <RefreshCw size={18} aria-hidden="true" />
-              </button>
-            </div>
+          <div className="actions framework-actions">
+            <button className="primary" disabled={!topicInput.trim() || status !== 'idle'} onClick={startAgent} type="button">
+              {status === 'starting' ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
+              Structure Idea
+            </button>
+            <button className="secondary" disabled={status !== 'idle'} onClick={startSampleAgent} type="button">
+              <Sparkles size={18} aria-hidden="true" />
+              Sample
+            </button>
+            <button className="secondary" disabled={!topicInput.trim() || refining || status !== 'idle'} onClick={refineProblem} type="button">
+              {refining ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Wand2 size={18} aria-hidden="true" />}
+              Refine to Problem
+            </button>
+            <button className="secondary icon-button" onClick={reset} type="button" aria-label="Reset">
+              <RefreshCw size={18} aria-hidden="true" />
+            </button>
           </div>
 
           <div className="memory-bar">
@@ -543,22 +652,6 @@ function App() {
           </div>
 
           {error ? <p className="error-banner">{error}</p> : null}
-
-
-          <div className="workflow-grid" aria-label="Workflow stages">
-            {STAGES.map(([number, title, description], index) => (
-              <article className="stage-card" key={title}>
-                <div className="stage-topline">
-                  <span className="stage-number">{number}</span>
-                  <span className={`stage-status ${stageStatus(index, fieldSuggestions, decisions, project, result)}`}>
-                    {stageLabel(index, fieldSuggestions, decisions, project, result)}
-                  </span>
-                </div>
-                <h3>{title}</h3>
-                <p>{description}</p>
-              </article>
-            ))}
-          </div>
 
           <div className="workspace-grid">
             <section className="workspace-panel suggestions-panel">
@@ -716,17 +809,13 @@ function App() {
 
             <section className="workspace-panel state-panel">
               <PanelHeader title="Accepted Project State" meta={`${acceptedCount}/${PROJECT_FIELDS.length} ready`} />
-              <label>
-                Project Title
-                <input value={project.title} onChange={(event) => updateProjectField('title', event.target.value)} />
-              </label>
               {PROJECT_FIELDS.map(([field, label]) => (
                 <label key={field}>
                   {label}
                   <textarea value={project[field] || ''} onChange={(event) => updateProjectField(field, event.target.value)} />
                 </label>
               ))}
-              <button className="primary" disabled={!project.title || status !== 'idle'} onClick={generateProposal} type="button">
+              <button className="primary" disabled={!project.problem || status !== 'idle'} onClick={generateProposal} type="button">
                 {status === 'drafting' ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <FileText size={16} aria-hidden="true" />}
                 Generate Proposal
               </button>
@@ -905,21 +994,6 @@ function EmptyState({ text, compact = false }) {
   );
 }
 
-function stageStatus(index, fieldSuggestions, decisions, project, result) {
-  if (index === 0 && fieldSuggestions.length) return 'status-complete';
-  if (index === 1 && decisions.length) return 'status-complete';
-  if (index === 2 && PROJECT_FIELDS.some(([field]) => project[field])) return 'status-complete';
-  if (index >= 3 && result) return 'status-complete';
-  return 'status-waiting';
-}
-
-function stageLabel(index, fieldSuggestions, decisions, project, result) {
-  if (index === 0 && fieldSuggestions.length) return 'Shown';
-  if (index === 1 && decisions.length) return 'Shown';
-  if (index === 2 && PROJECT_FIELDS.some(([field]) => project[field])) return 'Shown';
-  if (index >= 3 && result) return 'Shown';
-  return 'Ready';
-}
 
 function countCovered(rows = []) {
   return rows.filter((row) => /^covered$/i.test(row.status)).length;
@@ -955,27 +1029,831 @@ function compactResult(result) {
   };
 }
 
+const PROPOSAL_STEPS = [
+  { key: 'projectDetails',   number: 1, label: 'Project Details',             hint: 'Research title, student info, objectives' },
+  { key: 'researchProblem',  number: 2, label: 'Research Problem',            hint: 'Problem statement, questions, hypotheses' },
+  { key: 'methodology',      number: 3, label: 'Methodology',                 hint: 'Research type, tools, experiment design' },
+  { key: 'timeline',         number: 4, label: 'Timeline',                    hint: 'Duration and research activities' },
+  { key: 'risks',            number: 5, label: 'Risks & Mitigation',          hint: 'Identify and mitigate project risks' },
+  { key: 'references',       number: 6, label: 'References',                  hint: 'Citations in APA, IEEE or ACM format' },
+];
+
+function ProposalStepper({ completed, onOpen }) {
+  const doneCount = PROPOSAL_STEPS.filter((s) => completed[s.key]).length;
+
+  return (
+    <div className="proposal-stepper-wrap">
+      <div className="proposal-stepper-header">
+        <span className="proposal-stepper-title">Research Proposal Sections</span>
+        <span className="proposal-stepper-progress">{doneCount} / {PROPOSAL_STEPS.length} complete</span>
+      </div>
+      <div className="proposal-stepper">
+        {PROPOSAL_STEPS.map((step, index) => {
+          const done = completed[step.key];
+          return (
+            <div key={step.key} className="stepper-step-wrapper">
+              <button
+                className={`stepper-step ${done ? 'stepper-done' : 'stepper-pending'}`}
+                type="button"
+                onClick={() => onOpen(step.key)}
+                title={step.hint}
+              >
+                <div className="stepper-circle">
+                  {done ? <CheckCircle2 size={18} aria-hidden="true" /> : <span>{step.number}</span>}
+                </div>
+                <span className="stepper-label">{step.label}</span>
+                <span className="stepper-status">{done ? 'Complete' : 'Click to fill'}</span>
+              </button>
+              {index < PROPOSAL_STEPS.length - 1 && (
+                <div className={`stepper-connector ${done ? 'stepper-connector-done' : ''}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const CITATION_STYLES = ['APA', 'IEEE', 'ACM'];
+
+function ReferencesModal({ onSave, onClose }) {
+  const [citationStyle, setCitationStyle] = useState('APA');
+  const [references, setReferences] = useState([{ id: 1, doi: '', bibtex: '' }]);
+  const [formatted, setFormatted] = useState('');
+  const [report, setReport] = useState('');
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+
+  function addReference() {
+    setReferences((prev) => [...prev, { id: Date.now(), doi: '', bibtex: '' }]);
+  }
+
+  function setRefField(id, field, value) {
+    setReferences((prev) => prev.map((r) => r.id === id ? { ...r, [field]: value } : r));
+  }
+
+  function removeReference(id) {
+    setReferences((prev) => prev.length > 1 ? prev.filter((r) => r.id !== id) : prev);
+  }
+
+  async function handleAction(action) {
+    const filled = references.filter((r) => r.doi.trim() || r.bibtex.trim());
+    if (!filled.length) { setError('Add at least one DOI or BibTeX entry.'); return; }
+    setBusy(action);
+    setError('');
+    try {
+      if (action === 'generate') {
+        const data = await postJson('/api/research/generate-references', { citationStyle, references });
+        setFormatted(data.formatted);
+        setReport('');
+      } else {
+        const data = await postJson('/api/research/validate-citations', { citationStyle, references });
+        setReport(data.report);
+        setFormatted('');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-label="References">
+        <div className="modal-header">
+          <h2>References</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && <p className="error-banner">{error}</p>}
+
+          <div className="modal-field-group">
+            <span className="modal-field-label">Citation Style</span>
+            <div className="radio-group">
+              {CITATION_STYLES.map((style) => (
+                <label key={style} className="radio-label">
+                  <input type="radio" name="citation_style" value={style} checked={citationStyle === style} onChange={() => setCitationStyle(style)} />
+                  {style}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <hr className="rp-divider" />
+
+          <div className="ref-list">
+            {references.map((ref, index) => (
+              <div key={ref.id} className="ref-entry">
+                <div className="ref-entry-header">
+                  <span className="modal-field-label">Reference {index + 1}</span>
+                  {references.length > 1 && (
+                    <button className="secondary icon-button" type="button" onClick={() => removeReference(ref.id)} aria-label="Remove reference">
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+                <label>
+                  DOI
+                  <input value={ref.doi} onChange={(e) => setRefField(ref.id, 'doi', e.target.value)} placeholder="e.g. 10.1145/3292500.3330701" />
+                </label>
+                <div className="ref-or-divider"><span>OR</span></div>
+                <label>
+                  BibTeX
+                  <textarea
+                    value={ref.bibtex}
+                    onChange={(e) => setRefField(ref.id, 'bibtex', e.target.value)}
+                    placeholder={'@article{key,\n  author={...},\n  title={...},\n  year={2024}\n}'}
+                    style={{ minHeight: '90px', fontFamily: 'monospace', fontSize: '0.85rem' }}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <button className="llm-help-button" type="button" onClick={addReference}>
+            <Plus size={16} aria-hidden="true" />
+            Add Reference
+          </button>
+
+          <hr className="rp-divider" />
+
+          <div className="rp-action-row">
+            <button className="secondary" type="button" disabled={!!busy} onClick={() => handleAction('generate')}>
+              {busy === 'generate' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
+              Generate References
+            </button>
+            <button className="secondary" type="button" disabled={!!busy} onClick={() => handleAction('validate')}>
+              {busy === 'validate' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <CheckCircle2 size={15} aria-hidden="true" />}
+              Validate Citations
+            </button>
+          </div>
+
+          {formatted && (
+            <div className="rp-motivation-box">
+              <span className="rp-motivation-label">Formatted References ({citationStyle})</span>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{formatted}</pre>
+            </div>
+          )}
+
+          {report && (
+            <div className="rp-motivation-box">
+              <span className="rp-motivation-label">Validation Report</span>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{report}</pre>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave({ formatted, citationStyle, references })}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const RISK_CATEGORIES = ['Technical', 'Data Availability', 'Ethical', 'Financial', 'Resource', 'Timeline', 'Regulatory', 'Other'];
+const LIKELIHOOD_OPTIONS = ['Low', 'Medium', 'High'];
+const IMPACT_OPTIONS = ['Low', 'Medium', 'High'];
+
+const EMPTY_RISK = { id: 0, category: 'Technical', description: '', likelihood: 'Low', impact: 'Medium', mitigation: '' };
+
+function RisksModal({ onSave, onClose }) {
+  const [savedRisks, setSavedRisks] = useState([]);
+  const [form, setForm] = useState({ ...EMPTY_RISK, id: 1 });
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+
+  function setField(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function handleAiAction(action) {
+    if (!form.description.trim()) { setError('Enter a risk description first.'); return; }
+    setBusy(action);
+    setError('');
+    try {
+      const body = { category: form.category, description: form.description, likelihood: form.likelihood, impact: form.impact };
+      if (action === 'structure-risk') {
+        const data = await postJson('/api/research/structure-risk', body);
+        setField('description', data.description);
+      } else {
+        const data = await postJson('/api/research/suggest-mitigation', body);
+        setField('mitigation', data.mitigation);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function saveRisk() {
+    if (!form.description.trim()) { setError('Enter a risk description before saving.'); return; }
+    setSavedRisks((prev) => {
+      const existing = prev.findIndex((r) => r.id === form.id);
+      if (existing >= 0) { const next = [...prev]; next[existing] = form; return next; }
+      return [...prev, form];
+    });
+    setForm({ ...EMPTY_RISK, id: Date.now() });
+    setError('');
+  }
+
+  function editRisk(risk) {
+    setForm(risk);
+  }
+
+  function deleteRisk(id) {
+    setSavedRisks((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-label="Risk and Mitigation">
+        <div className="modal-header">
+          <h2>Risk &amp; Mitigation</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && <p className="error-banner">{error}</p>}
+
+          {savedRisks.length > 0 && (
+            <div className="risk-saved-list">
+              {savedRisks.map((risk) => (
+                <div key={risk.id} className="risk-saved-card">
+                  <div className="risk-saved-header">
+                    <span className={`risk-badge risk-${risk.likelihood.toLowerCase()}`}>{risk.likelihood} likelihood</span>
+                    <span className={`risk-badge risk-impact-${risk.impact.toLowerCase()}`}>{risk.impact} impact</span>
+                    <strong>{risk.category}</strong>
+                  </div>
+                  <p>{risk.description}</p>
+                  <div className="risk-saved-actions">
+                    <button className="secondary" type="button" onClick={() => editRisk(risk)}>Edit</button>
+                    <button className="secondary" type="button" onClick={() => deleteRisk(risk.id)}>Remove</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="modal-field-group">
+            <span className="modal-field-label">Risk Category</span>
+            <div className="radio-group radio-group-wrap">
+              {RISK_CATEGORIES.map((cat) => (
+                <label key={cat} className="radio-label">
+                  <input type="radio" name="risk_category" value={cat} checked={form.category === cat} onChange={() => setField('category', cat)} />
+                  {cat}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label>
+            Risk Description
+            <textarea
+              value={form.description}
+              onChange={(e) => setField('description', e.target.value)}
+              placeholder="Example: Public datasets may not contain enough high-quality samples for training."
+              style={{ minHeight: '110px' }}
+            />
+          </label>
+
+          <hr className="rp-divider" />
+
+          <div className="modal-grid">
+            <div className="modal-field-group">
+              <span className="modal-field-label">Likelihood</span>
+              <div className="radio-group">
+                {LIKELIHOOD_OPTIONS.map((opt) => (
+                  <label key={opt} className="radio-label">
+                    <input type="radio" name="likelihood" value={opt} checked={form.likelihood === opt} onChange={() => setField('likelihood', opt)} />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="modal-field-group">
+              <span className="modal-field-label">Impact</span>
+              <div className="radio-group">
+                {IMPACT_OPTIONS.map((opt) => (
+                  <label key={opt} className="radio-label">
+                    <input type="radio" name="impact" value={opt} checked={form.impact === opt} onChange={() => setField('impact', opt)} />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <hr className="rp-divider" />
+
+          <label>
+            Current Mitigation
+            <textarea
+              value={form.mitigation}
+              onChange={(e) => setField('mitigation', e.target.value)}
+              placeholder="Describe how you plan to mitigate this risk..."
+              style={{ minHeight: '90px' }}
+            />
+          </label>
+
+          <hr className="rp-divider" />
+
+          <div className="rp-action-row">
+            <button className="secondary" type="button" disabled={!form.description.trim() || !!busy} onClick={() => handleAiAction('structure-risk')}>
+              {busy === 'structure-risk' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Wand2 size={15} aria-hidden="true" />}
+              AI Structure Risk
+            </button>
+            <button className="secondary" type="button" disabled={!form.description.trim() || !!busy} onClick={() => handleAiAction('suggest-mitigation')}>
+              {busy === 'suggest-mitigation' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
+              AI Suggest Mitigation
+            </button>
+            <button className="primary" type="button" onClick={saveRisk}>
+              <CheckCircle2 size={15} aria-hidden="true" />
+              Save Risk
+            </button>
+          </div>
+
+          <button className="llm-help-button" style={{ marginTop: '4px' }} type="button" onClick={() => { setForm({ ...EMPTY_RISK, id: Date.now() }); setError(''); }}>
+            <Plus size={16} aria-hidden="true" />
+            Add Another Risk
+          </button>
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave({ risks: savedRisks })}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DEFAULT_ACTIVITIES = [
+  { name: 'Literature Review', months: 'Month 1-3' },
+  { name: 'Implementation', months: 'Month 4-10' },
+  { name: 'Experiments', months: 'Month 11-18' },
+  { name: 'Writing', months: 'Month 19-24' }
+];
+
+function TimelineModal({ onSave, onClose }) {
+  const [duration, setDuration] = useState(24);
+  const [activities, setActivities] = useState(DEFAULT_ACTIVITIES);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  function setActivity(index, field, value) {
+    setActivities((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }
+
+  function addActivity() {
+    setActivities((prev) => [...prev, { name: '', months: '' }]);
+  }
+
+  function removeActivity(index) {
+    setActivities((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleGenerate() {
+    setBusy(true);
+    setError('');
+    try {
+      const data = await postJson('/api/research/generate-timeline', { durationMonths: duration, activities });
+      setActivities(data.activities);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="Timeline">
+        <div className="modal-header">
+          <h2>Timeline</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && <p className="error-banner">{error}</p>}
+
+          <div className="timeline-duration-row">
+            <span className="modal-field-label">Research Duration</span>
+            <div className="timeline-duration-input">
+              <input
+                type="number"
+                min="1"
+                max="120"
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                style={{ width: '72px', textAlign: 'center' }}
+              />
+              <span className="timeline-months-label">Months</span>
+            </div>
+          </div>
+
+          <hr className="rp-divider" />
+
+          <div className="modal-objectives">
+            <div className="modal-objectives-header">
+              <span>Activities</span>
+              <button className="secondary" type="button" onClick={addActivity}>
+                <Plus size={15} aria-hidden="true" />
+                Add Activity
+              </button>
+            </div>
+            {activities.map((activity, index) => (
+              <div className="timeline-activity-row" key={index}>
+                <input
+                  className="timeline-activity-name"
+                  value={activity.name}
+                  onChange={(e) => setActivity(index, 'name', e.target.value)}
+                  placeholder="Activity name"
+                />
+                <input
+                  className="timeline-activity-months"
+                  value={activity.months}
+                  onChange={(e) => setActivity(index, 'months', e.target.value)}
+                  placeholder="Month X-Y"
+                />
+                <button
+                  className="secondary icon-button"
+                  type="button"
+                  disabled={activities.length === 1}
+                  onClick={() => removeActivity(index)}
+                  aria-label="Remove"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <hr className="rp-divider" />
+
+          <button className="llm-help-button" type="button" disabled={busy} onClick={handleGenerate}>
+            {busy ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
+            Generate Timeline
+          </button>
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave({ activities, duration })}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const RESEARCH_TYPES = ['Experimental', 'Survey', 'Qualitative', 'Quantitative', 'Mixed Methods'];
+
+const EMPTY_METHODOLOGY = {
+  research_type: 'Experimental',
+  data_source: '',
+  tools: [],
+  experiment_description: '',
+  generated_methodology: '',
+  contributions: ['']
+};
+
+function MethodologyModal({ onSave, onClose }) {
+  const [form, setForm] = useState(EMPTY_METHODOLOGY);
+  const [toolInput, setToolInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  function setField(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function addTool() {
+    const tag = toolInput.trim();
+    if (!tag || form.tools.includes(tag)) { setToolInput(''); return; }
+    setForm((f) => ({ ...f, tools: [...f.tools, tag] }));
+    setToolInput('');
+  }
+
+  function removeTool(tag) {
+    setForm((f) => ({ ...f, tools: f.tools.filter((t) => t !== tag) }));
+  }
+
+  function addContribution() {
+    setForm((f) => ({ ...f, contributions: [...f.contributions, ''] }));
+  }
+
+  function setContribution(index, value) {
+    setForm((f) => { const next = [...f.contributions]; next[index] = value; return { ...f, contributions: next }; });
+  }
+
+  function removeContribution(index) {
+    setForm((f) => ({ ...f, contributions: f.contributions.filter((_, i) => i !== index) }));
+  }
+
+  async function handleGenerateMethodology() {
+    setBusy(true);
+    setError('');
+    try {
+      const data = await postJson('/api/research/generate-methodology', {
+        researchType: form.research_type,
+        dataSource: form.data_source,
+        tools: form.tools,
+        experimentDescription: form.experiment_description
+      });
+      setField('generated_methodology', data.methodology);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="Methodology">
+        <div className="modal-header">
+          <h2>Methodology</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && <p className="error-banner">{error}</p>}
+
+          <div className="modal-field-group">
+            <span className="modal-field-label">Research Type</span>
+            <div className="radio-group">
+              {RESEARCH_TYPES.map((type) => (
+                <label key={type} className="radio-label">
+                  <input
+                    type="radio"
+                    name="research_type"
+                    value={type}
+                    checked={form.research_type === type}
+                    onChange={() => setField('research_type', type)}
+                  />
+                  {type}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <hr className="rp-divider" />
+
+          <label>
+            Data Source
+            <input value={form.data_source} onChange={(e) => setField('data_source', e.target.value)} placeholder="e.g. Public datasets, Lab experiments, Industry data" />
+          </label>
+
+          <div className="modal-field-group">
+            <span className="modal-field-label">Tools</span>
+            <div className="keyword-input-row">
+              <input
+                value={toolInput}
+                onChange={(e) => setToolInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTool(); } }}
+                placeholder="Type a tool and press Enter"
+              />
+              <button className="secondary" type="button" onClick={addTool}>Add</button>
+            </div>
+            {form.tools.length > 0 && (
+              <div className="keyword-tags">
+                {form.tools.map((tag) => (
+                  <span key={tag} className="keyword-tag">
+                    {tag}
+                    <button type="button" onClick={() => removeTool(tag)} aria-label={`Remove ${tag}`}>
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <hr className="rp-divider" />
+
+          <label>
+            Experiment Description
+            <textarea
+              value={form.experiment_description}
+              onChange={(e) => setField('experiment_description', e.target.value)}
+              placeholder="Describe the experiment design, steps, variables, and expected process..."
+              style={{ minHeight: '130px' }}
+            />
+          </label>
+
+          <hr className="rp-divider" />
+
+          <button className="llm-help-button" type="button" disabled={!form.experiment_description.trim() || busy} onClick={handleGenerateMethodology}>
+            {busy ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
+            Generate Methodology
+          </button>
+
+          {form.generated_methodology && (
+            <div className="rp-motivation-box">
+              <span className="rp-motivation-label">Generated Methodology</span>
+              <p>{form.generated_methodology}</p>
+            </div>
+          )}
+
+          <div className="modal-objectives">
+            <div className="modal-objectives-header">
+              <span>Expected Contributions</span>
+              <button className="secondary" type="button" onClick={addContribution}>
+                <Plus size={15} aria-hidden="true" />
+                Add Contribution
+              </button>
+            </div>
+            {form.contributions.map((c, index) => (
+              <div className="objective-row" key={index}>
+                <div className="contribution-number">{index + 1}.</div>
+                <input value={c} onChange={(e) => setContribution(index, e.target.value)} placeholder={`Contribution ${index + 1}`} />
+                <button className="secondary icon-button" type="button" disabled={form.contributions.length === 1} onClick={() => removeContribution(index)} aria-label="Remove">
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave({ generated_methodology: form.generated_methodology, tools: form.tools, contributions: form.contributions })}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const EMPTY_RESEARCH_PROBLEM = { problem_description: '', motivation: '', primary_question: '', hypotheses: [''] };
+
+function ResearchProblemModal({ onSave, onClose }) {
+  const [form, setForm] = useState(EMPTY_RESEARCH_PROBLEM);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+
+  async function callAction(action, bodyExtra = {}) {
+    setBusy(action);
+    setError('');
+    try {
+      const body = { problemDescription: form.problem_description, primaryQuestion: form.primary_question, ...bodyExtra };
+      const data = await postJson(`/api/research/${action}`, body);
+      if (action === 'enhance-problem') setForm((f) => ({ ...f, problem_description: data.problemDescription }));
+      if (action === 'motivation') setForm((f) => ({ ...f, motivation: data.motivation }));
+      if (action === 'suggest-question') setForm((f) => ({ ...f, primary_question: data.primaryQuestion }));
+      if (action === 'suggest-hypotheses') setForm((f) => ({ ...f, hypotheses: [...f.hypotheses.filter(h => h.trim()), ...data.hypotheses] }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function setHypothesis(index, value) {
+    setForm((f) => { const next = [...f.hypotheses]; next[index] = value; return { ...f, hypotheses: next }; });
+  }
+
+  function addHypothesis() {
+    setForm((f) => ({ ...f, hypotheses: [...f.hypotheses, ''] }));
+  }
+
+  function removeHypothesis(index) {
+    setForm((f) => ({ ...f, hypotheses: f.hypotheses.filter((_, i) => i !== index) }));
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="Research Problem and Questions">
+        <div className="modal-header">
+          <h2>Research Problem and Questions</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && <p className="error-banner">{error}</p>}
+
+          <label>
+            Describe the research problem
+            <textarea
+              value={form.problem_description}
+              onChange={(e) => setForm((f) => ({ ...f, problem_description: e.target.value }))}
+              placeholder="Example: Current serverless platforms experience inefficient resource allocation due to lack of workload-aware scheduling, resulting in high cold-start latency and wasted compute resources..."
+              style={{ minHeight: '130px' }}
+            />
+          </label>
+
+          <div className="rp-action-row">
+            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('enhance-problem')}>
+              {busy === 'enhance-problem' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Wand2 size={15} aria-hidden="true" />}
+              Enhance Problem Statement
+            </button>
+            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('motivation')}>
+              {busy === 'motivation' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
+              Generate Motivation
+            </button>
+          </div>
+
+          {form.motivation && (
+            <div className="rp-motivation-box">
+              <span className="rp-motivation-label">Generated Motivation</span>
+              <p>{form.motivation}</p>
+            </div>
+          )}
+
+          <label>
+            Primary Research Question
+            <input
+              value={form.primary_question}
+              onChange={(e) => setForm((f) => ({ ...f, primary_question: e.target.value }))}
+              placeholder="e.g. How can workload-aware scheduling reduce cold-start latency in serverless platforms?"
+            />
+          </label>
+
+          <div className="modal-objectives">
+            <div className="modal-objectives-header">
+              <span>Hypotheses</span>
+              <button className="secondary" type="button" onClick={addHypothesis}>
+                <Plus size={15} aria-hidden="true" />
+                Add Hypothesis
+              </button>
+            </div>
+            {form.hypotheses.map((h, index) => (
+              <div className="objective-row" key={index}>
+                <input value={h} onChange={(e) => setHypothesis(index, e.target.value)} placeholder={`Hypothesis ${index + 1}`} />
+                <button className="secondary icon-button" type="button" disabled={form.hypotheses.length === 1} onClick={() => removeHypothesis(index)} aria-label="Remove">
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <hr className="rp-divider" />
+
+          <div className="rp-action-row">
+            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('suggest-question')}>
+              {busy === 'suggest-question' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <BotMessageSquare size={15} aria-hidden="true" />}
+              Suggest Questions
+            </button>
+            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('suggest-hypotheses')}>
+              {busy === 'suggest-hypotheses' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <BotMessageSquare size={15} aria-hidden="true" />}
+              Suggest Hypotheses
+            </button>
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave({ motivation: form.motivation, hypotheses: form.hypotheses, primary_question: form.primary_question })}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProjectDetailsModal({ details, onSave, onClose }) {
   const [form, setForm] = useState({ ...EMPTY_PROJECT_DETAILS, ...details });
-  const [keywordInput, setKeywordInput] = useState('');
+  const [llmHelping, setLlmHelping] = useState(false);
+  const [llmError, setLlmError] = useState('');
+
+  async function handleLlmHelp() {
+    const trimmed = form.rough_idea.trim();
+    if (!trimmed) return;
+    setLlmHelping(true);
+    setLlmError('');
+    try {
+      const data = await postJson('/api/refine/title-intro', { roughIdea: trimmed });
+      setForm((prev) => ({
+        ...prev,
+        research_title: data.research_title || prev.research_title,
+        introduction: data.introduction || prev.introduction
+      }));
+    } catch (err) {
+      setLlmError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLlmHelping(false);
+    }
+  }
 
   function setField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function addKeyword() {
-    const tag = keywordInput.trim().replace(/,+$/, '');
-    if (!tag || form.keywords.includes(tag)) { setKeywordInput(''); return; }
-    setForm((current) => ({ ...current, keywords: [...current.keywords, tag] }));
-    setKeywordInput('');
-  }
-
-  function removeKeyword(tag) {
-    setForm((current) => ({ ...current, keywords: current.keywords.filter((k) => k !== tag) }));
-  }
-
-  function handleKeywordKey(e) {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeyword(); }
   }
 
   function setObjective(index, value) {
@@ -1009,8 +1887,57 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
 
         <div className="modal-body">
           <label>
-            Research Title
+            Rough Idea
+            <input value={form.rough_idea} onChange={(e) => setField('rough_idea', e.target.value)} placeholder="e.g. Agent for citation-grounded literature review" />
+          </label>
+
+          <div className="modal-objectives">
+            <div className="modal-objectives-header">
+              <span>Objectives</span>
+              <button className="secondary" type="button" onClick={addObjective}>
+                <Plus size={15} aria-hidden="true" />
+                Add
+              </button>
+            </div>
+            {form.objectives.map((obj, index) => (
+              <div className="objective-row" key={index}>
+                <input
+                  value={obj}
+                  onChange={(e) => setObjective(index, e.target.value)}
+                  placeholder={`Objective ${index + 1}`}
+                />
+                <button
+                  className="secondary icon-button"
+                  type="button"
+                  disabled={form.objectives.length === 1}
+                  onClick={() => removeObjective(index)}
+                  aria-label="Remove objective"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            className="llm-help-button"
+            type="button"
+            disabled={!form.rough_idea.trim() || llmHelping}
+            onClick={handleLlmHelp}
+          >
+            {llmHelping ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <BotMessageSquare size={16} aria-hidden="true" />}
+            LLM Help
+          </button>
+          {llmError && <p className="error-banner">{llmError}</p>}
+
+          <label>
+            Research Project Title
             <input value={form.research_title} onChange={(e) => setField('research_title', e.target.value)} placeholder="e.g. Federated Learning for Privacy-Preserving Healthcare" />
+          </label>
+
+          <label>
+            Objective
+            <textarea value={form.introduction} onChange={(e) => setField('introduction', e.target.value)} placeholder="Brief objective of the research..." />
           </label>
 
           <div className="modal-grid">
@@ -1065,36 +1992,7 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
             </div>
           </div>
 
-          <div className="modal-field-group">
-            <span className="modal-field-label">Keywords</span>
-            <div className="keyword-input-row">
-              <input
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={handleKeywordKey}
-                placeholder="Type a keyword and press Enter or comma"
-              />
-              <button className="secondary" type="button" onClick={addKeyword}>Add</button>
-            </div>
-            {form.keywords.length > 0 && (
-              <div className="keyword-tags">
-                {form.keywords.map((tag) => (
-                  <span key={tag} className="keyword-tag">
-                    {tag}
-                    <button type="button" onClick={() => removeKeyword(tag)} aria-label={`Remove ${tag}`}>
-                      <X size={12} aria-hidden="true" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="modal-grid">
-            <label>
-              Project Name
-              <input value={form.project_name} onChange={(e) => setField('project_name', e.target.value)} placeholder="Cloud Migration" />
-            </label>
             <label>
               Budget
               <input value={form.budget} onChange={(e) => setField('budget', e.target.value)} placeholder="$500,000" />
@@ -1109,38 +2007,6 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
             </label>
           </div>
 
-          <label>
-            Special Requirements
-            <textarea value={form.special_requirements} onChange={(e) => setField('special_requirements', e.target.value)} placeholder="e.g. HIPAA compliance, SOC 2, on-premise deployment..." />
-          </label>
-
-          <div className="modal-objectives">
-            <div className="modal-objectives-header">
-              <span>Objectives</span>
-              <button className="secondary" type="button" onClick={addObjective}>
-                <Plus size={15} aria-hidden="true" />
-                Add
-              </button>
-            </div>
-            {form.objectives.map((obj, index) => (
-              <div className="objective-row" key={index}>
-                <input
-                  value={obj}
-                  onChange={(e) => setObjective(index, e.target.value)}
-                  placeholder={`Objective ${index + 1}`}
-                />
-                <button
-                  className="secondary icon-button"
-                  type="button"
-                  disabled={form.objectives.length === 1}
-                  onClick={() => removeObjective(index)}
-                  aria-label="Remove objective"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="modal-footer">

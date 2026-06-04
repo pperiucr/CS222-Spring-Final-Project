@@ -3,7 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { proposalLatexToPdf } from './pdfExport.js';
 import { answerAgentQuestion, generateProposal, startAgentSession } from './proposalGenerator.js';
-import { refineProblemStatement } from './claudeRefine.js';
+import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations } from './claudeRefine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -70,6 +70,123 @@ app.post('/api/proposal', async (request, response) => {
       error: 'Proposal generation failed.',
       detail: error instanceof Error ? error.message : String(error)
     });
+  }
+});
+
+app.post('/api/refine/title-intro', async (request, response) => {
+  try {
+    const roughIdea = String(request.body?.roughIdea || '').trim();
+    if (!roughIdea) { response.status(400).json({ error: 'roughIdea is required.' }); return; }
+    const result = await refineTitleAndIntro(roughIdea);
+    response.json(result);
+  } catch (error) {
+    response.status(500).json({ error: 'Title/intro generation failed.', detail: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+app.post('/api/research/enhance-problem', async (request, response) => {
+  try {
+    const text = String(request.body?.problemDescription || '').trim();
+    if (!text) { response.status(400).json({ error: 'problemDescription is required.' }); return; }
+    response.json({ problemDescription: await enhanceProblemStatement(text) });
+  } catch (error) {
+    response.status(500).json({ error: 'Enhance failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/motivation', async (request, response) => {
+  try {
+    const text = String(request.body?.problemDescription || '').trim();
+    if (!text) { response.status(400).json({ error: 'problemDescription is required.' }); return; }
+    response.json({ motivation: await generateMotivation(text) });
+  } catch (error) {
+    response.status(500).json({ error: 'Motivation generation failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/suggest-question', async (request, response) => {
+  try {
+    const text = String(request.body?.problemDescription || '').trim();
+    if (!text) { response.status(400).json({ error: 'problemDescription is required.' }); return; }
+    response.json({ primaryQuestion: await suggestResearchQuestion(text) });
+  } catch (error) {
+    response.status(500).json({ error: 'Question suggestion failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/suggest-hypotheses', async (request, response) => {
+  try {
+    const problem = String(request.body?.problemDescription || '').trim();
+    const question = String(request.body?.primaryQuestion || '').trim();
+    if (!problem) { response.status(400).json({ error: 'problemDescription is required.' }); return; }
+    response.json({ hypotheses: await suggestHypotheses(problem, question) });
+  } catch (error) {
+    response.status(500).json({ error: 'Hypotheses suggestion failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/generate-references', async (request, response) => {
+  try {
+    const { citationStyle = 'APA', references = [] } = request.body || {};
+    const filled = references.filter((r) => r.doi?.trim() || r.bibtex?.trim());
+    if (!filled.length) { response.status(400).json({ error: 'At least one DOI or BibTeX entry is required.' }); return; }
+    response.json({ formatted: await generateReferences(citationStyle, filled) });
+  } catch (error) {
+    response.status(500).json({ error: 'Reference generation failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/validate-citations', async (request, response) => {
+  try {
+    const { citationStyle = 'APA', references = [] } = request.body || {};
+    if (!references.length) { response.status(400).json({ error: 'At least one reference is required.' }); return; }
+    response.json({ report: await validateCitations(citationStyle, references) });
+  } catch (error) {
+    response.status(500).json({ error: 'Validation failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/structure-risk', async (request, response) => {
+  try {
+    const { category = '', description = '' } = request.body || {};
+    if (!description.trim()) { response.status(400).json({ error: 'description is required.' }); return; }
+    response.json({ description: await structureRisk(category, description) });
+  } catch (error) {
+    response.status(500).json({ error: 'Risk structuring failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/suggest-mitigation', async (request, response) => {
+  try {
+    const { category = '', description = '', likelihood = '', impact = '' } = request.body || {};
+    if (!description.trim()) { response.status(400).json({ error: 'description is required.' }); return; }
+    response.json({ mitigation: await suggestMitigation(category, description, likelihood, impact) });
+  } catch (error) {
+    response.status(500).json({ error: 'Mitigation suggestion failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/generate-timeline', async (request, response) => {
+  try {
+    const { durationMonths = 24, activities = [] } = request.body || {};
+    const result = await generateTimeline(Number(durationMonths), activities);
+    response.json({ activities: result });
+  } catch (error) {
+    response.status(500).json({ error: 'Timeline generation failed.', detail: error.message });
+  }
+});
+
+app.post('/api/research/generate-methodology', async (request, response) => {
+  try {
+    const { researchType = '', dataSource = '', tools = [], experimentDescription = '' } = request.body || {};
+    if (!experimentDescription.trim() && !researchType.trim()) {
+      response.status(400).json({ error: 'At least experimentDescription or researchType is required.' });
+      return;
+    }
+    const methodology = await generateMethodology(researchType, dataSource, Array.isArray(tools) ? tools : [], experimentDescription);
+    response.json({ methodology });
+  } catch (error) {
+    response.status(500).json({ error: 'Methodology generation failed.', detail: error.message });
   }
 });
 
