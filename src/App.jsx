@@ -105,6 +105,7 @@ function App() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [risksOpen, setRisksOpen] = useState(false);
   const [referencesOpen, setReferencesOpen] = useState(false);
+  const [generatePopupOpen, setGeneratePopupOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -515,21 +516,20 @@ function App() {
             <h2 className="proposal-output-heading">Research Proposal Draft</h2>
             <div className="proposal-output-grid">
               {[
-                { label: '1. Research Project Title', key: 'research_title', rows: 2 },
-                { label: '2. Objective',              key: 'objective',       rows: 4 },
-                { label: '3. Motivation',             key: 'motivation',      rows: 4 },
-                { label: '4. Hypothesis',             key: 'hypothesis',      rows: 4 },
-                { label: '5. Methodology',            key: 'methodology_text',rows: 5 },
-                { label: '6. Tools',                  key: 'tools',           rows: 3 },
-                { label: '7. Contributions',          key: 'contributions',   rows: 4 },
-                { label: '8. Timeline and Budget',    key: 'timeline_budget', rows: 5 },
-                { label: '9. Risks and Mitigation',   key: 'risks_mitigation',rows: 5 },
-                { label: '10. References',            key: 'references',      rows: 5 },
-              ].map(({ label, key, rows }) => (
-                <label key={key} className="proposal-output-field">
+                { label: '1a. Research Project Title', key: 'research_title',  full: false },
+                { label: '1b. Objective',              key: 'objective',        full: false },
+                { label: '2a. Problem Hypothesis',     key: 'hypothesis',       full: false },
+                { label: '2b. Motivation',             key: 'motivation',       full: false },
+                { label: '3a. Methodology',            key: 'methodology_text', full: true  },
+                { label: '3b. Tools',                  key: 'tools',            full: false },
+                { label: '3c. Contributions',          key: 'contributions',    full: false },
+                { label: '4. Timeline',                key: 'timeline_budget',  full: true  },
+                { label: '5. Risks and Mitigation',    key: 'risks_mitigation', full: true  },
+                { label: '6. References',              key: 'references',       full: true  },
+              ].map(({ label, key, full }) => (
+                <label key={key} className={`proposal-output-field${full ? ' full-width' : ''}`}>
                   <span className="proposal-output-label">{label}</span>
                   <textarea
-                    rows={rows}
                     value={proposalOutput[key]}
                     onChange={(e) => updateOutput({ [key]: e.target.value })}
                     placeholder={`${label} will appear here after saving the relevant section above...`}
@@ -537,7 +537,25 @@ function App() {
                 </label>
               ))}
             </div>
+            <div className="proposal-output-footer">
+              <button className="primary" type="button" disabled={status === 'drafting'} onClick={() => setGeneratePopupOpen(true)}>
+                {status === 'drafting' ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <FileText size={16} aria-hidden="true" />}
+                Generate Proposal
+              </button>
+            </div>
           </div>
+
+          {generatePopupOpen && (
+            <GenerateFormatPopup
+              result={result}
+              pdfUrl={pdfUrl}
+              status={status}
+              onGenerate={generateProposal}
+              onDownloadPdf={downloadPdf}
+              onDownloadLatex={downloadLatex}
+              onClose={() => setGeneratePopupOpen(false)}
+            />
+          )}
 
           {projectDetailsOpen && (
             <ProjectDetailsModal
@@ -815,10 +833,6 @@ function App() {
                   <textarea value={project[field] || ''} onChange={(event) => updateProjectField(field, event.target.value)} />
                 </label>
               ))}
-              <button className="primary" disabled={!project.problem || status !== 'idle'} onClick={generateProposal} type="button">
-                {status === 'drafting' ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <FileText size={16} aria-hidden="true" />}
-                Generate Proposal
-              </button>
             </section>
           </div>
 
@@ -1027,6 +1041,75 @@ function compactResult(result) {
     evaluationReport: result.evaluationReport,
     questions: result.questions
   };
+}
+
+function GenerateFormatPopup({ result, pdfUrl, status, onGenerate, onDownloadPdf, onDownloadLatex, onClose }) {
+  const busy = status === 'drafting' || status === 'exporting';
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card gen-format-popup" role="dialog" aria-modal="true" aria-label="Generate Proposal">
+        <div className="modal-header">
+          <h2>Generate Proposal</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          <div className="gen-format-grid">
+            <div className="gen-format-card">
+              <FileText size={28} className="gen-format-icon" aria-hidden="true" />
+              <strong>PDF</strong>
+              <p>Compiled, print-ready PDF via LaTeX</p>
+              <div className="gen-format-actions">
+                <button className="primary" type="button" disabled={busy} onClick={onGenerate}>
+                  {status === 'drafting' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
+                  Generate
+                </button>
+                {pdfUrl && (
+                  <>
+                    <a className="secondary gen-format-btn" href={pdfUrl} target="_blank" rel="noreferrer">
+                      <FileText size={15} aria-hidden="true" /> View
+                    </a>
+                    <button className="secondary" type="button" disabled={busy} onClick={onDownloadPdf}>
+                      {status === 'exporting' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Download size={15} aria-hidden="true" />}
+                      Download
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="gen-format-card">
+              <FileText size={28} className="gen-format-icon" aria-hidden="true" />
+              <strong>LaTeX</strong>
+              <p>Editable .tex source file for Overleaf or local compile</p>
+              <div className="gen-format-actions">
+                <button className="primary" type="button" disabled={busy} onClick={onGenerate}>
+                  {status === 'drafting' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
+                  Generate
+                </button>
+                {result?.proposalLatex && (
+                  <button className="secondary" type="button" onClick={onDownloadLatex}>
+                    <Download size={15} aria-hidden="true" /> Download .tex
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {!result && (
+            <p className="gen-format-hint">Click Generate to compile the proposal from your draft fields. PDF requires Tectonic to be installed.</p>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const PROPOSAL_STEPS = [

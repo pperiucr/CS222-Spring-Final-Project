@@ -1101,6 +1101,76 @@ th {
   margin: 4px 0;
 }
 
+/* Generate Format Popup */
+.gen-format-popup {
+  width: min(520px, 100%);
+}
+
+.gen-format-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.gen-format-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #c7d2d6;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f7fafa;
+  text-align: center;
+  align-items: center;
+}
+
+.gen-format-icon {
+  color: #2f6f62;
+}
+
+.gen-format-card strong {
+  color: #1f2d32;
+  font-size: 1rem;
+}
+
+.gen-format-card p {
+  margin: 0;
+  color: #536066;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.gen-format-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.gen-format-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  border: 1px solid #c7d2d6;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #ffffff;
+  color: #2d2a24;
+  font-weight: 800;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gen-format-hint {
+  margin: 8px 0 0;
+  color: #8a9ba2;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 /* Proposal Output Section */
 .proposal-output-section {
   border: 1px solid #cbd7dc;
@@ -1134,19 +1204,23 @@ th {
   font-weight: 900;
 }
 
+.proposal-output-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+  border-top: 1px solid #e3eaed;
+  margin-top: 6px;
+}
+
 .proposal-output-field textarea {
   resize: vertical;
-  min-height: 80px;
+  height: 120px;
+  min-height: 120px;
   font-size: 0.9rem;
   line-height: 1.5;
 }
 
-/* Make some fields span full width */
-.proposal-output-grid .proposal-output-field:nth-child(1),
-.proposal-output-grid .proposal-output-field:nth-child(5),
-.proposal-output-grid .proposal-output-field:nth-child(8),
-.proposal-output-grid .proposal-output-field:nth-child(9),
-.proposal-output-grid .proposal-output-field:nth-child(10) {
+.proposal-output-grid .proposal-output-field.full-width {
   grid-column: 1 / -1;
 }
 
