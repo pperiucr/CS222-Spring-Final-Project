@@ -512,19 +512,17 @@ function App() {
             }}
           />
 
-          {(projectDetails.research_title || projectDetails.student_name) && (
-            <div className="proposal-title-block">
-              {projectDetails.research_title && (
-                <h2 className="proposal-title-main">{projectDetails.research_title}</h2>
-              )}
-              <div className="proposal-title-meta">
-                {projectDetails.student_name && <span><strong>Student:</strong> {projectDetails.student_name}</span>}
-                {projectDetails.supervisor && <span><strong>Supervisor:</strong> {projectDetails.supervisor}</span>}
-                {projectDetails.university && <span><strong>University:</strong> {projectDetails.university}</span>}
-                {projectDetails.department && <span><strong>Department:</strong> {projectDetails.department}</span>}
-              </div>
+          {completedSteps.projectDetails && <div className="proposal-title-block">
+            {projectDetails.research_title && (
+              <h2 className="proposal-title-main">{projectDetails.research_title}</h2>
+            )}
+            <div className="proposal-title-meta">
+              <span><strong>Student:</strong> {projectDetails.student_name || EMPTY_PROJECT_DETAILS.student_name}</span>
+              <span><strong>Supervisor:</strong> {projectDetails.supervisor || EMPTY_PROJECT_DETAILS.supervisor}</span>
+              <span><strong>University:</strong> {projectDetails.university || EMPTY_PROJECT_DETAILS.university}</span>
+              <span><strong>Department:</strong> {projectDetails.department || EMPTY_PROJECT_DETAILS.department}</span>
             </div>
-          )}
+          </div>}
 
           <div className="proposal-output-section">
             <h2 className="proposal-output-heading">Research Proposal Draft</h2>
@@ -1505,14 +1503,14 @@ function RisksModal({ onSave, onClose }) {
 }
 
 const DEFAULT_ACTIVITIES = [
-  { name: 'Literature Review', months: 'Month 1-3' },
-  { name: 'Implementation', months: 'Month 4-10' },
-  { name: 'Experiments', months: 'Month 11-18' },
-  { name: 'Writing', months: 'Month 19-24' }
+  { name: 'Literature Review', months: 'Week 1' },
+  { name: 'Implementation', months: 'Week 2' },
+  { name: 'Experiments', months: 'Week 3' },
+  { name: 'Writing', months: 'Week 4' }
 ];
 
 function TimelineModal({ onSave, onClose }) {
-  const [duration, setDuration] = useState(24);
+  const [duration, setDuration] = useState(4);
   const [activities, setActivities] = useState(DEFAULT_ACTIVITIES);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -1570,7 +1568,7 @@ function TimelineModal({ onSave, onClose }) {
                 onChange={(e) => setDuration(Number(e.target.value))}
                 style={{ width: '72px', textAlign: 'center' }}
               />
-              <span className="timeline-months-label">Months</span>
+              <span className="timeline-months-label">Weeks</span>
             </div>
           </div>
 
@@ -1596,7 +1594,7 @@ function TimelineModal({ onSave, onClose }) {
                   className="timeline-activity-months"
                   value={activity.months}
                   onChange={(e) => setActivity(index, 'months', e.target.value)}
-                  placeholder="Month X-Y"
+                  placeholder="Week X"
                 />
                 <button
                   className="secondary icon-button"
@@ -1936,14 +1934,24 @@ function ResearchProblemModal({ onSave, onClose }) {
 }
 
 function ProjectDetailsModal({ details, onSave, onClose }) {
-  const [form, setForm] = useState({ ...EMPTY_PROJECT_DETAILS, ...details });
+  const [form, setForm] = useState(() => {
+    const merged = { ...EMPTY_PROJECT_DETAILS };
+    Object.entries(details).forEach(([key, val]) => {
+      if (val !== '' && val !== null && val !== undefined) merged[key] = val;
+    });
+    return merged;
+  });
   const [llmHelping, setLlmHelping] = useState(false);
   const [llmError, setLlmError] = useState('');
+  const [changedFields, setChangedFields] = useState(new Set());
+
+  function handleChange(field, value) {
+    setChangedFields((prev) => new Set([...prev, field]));
+    setField(field, value);
+  }
 
   function defaultStyle(field) {
-    return form[field] === EMPTY_PROJECT_DETAILS[field]
-      ? { color: '#aebfc6' }
-      : { color: '#202124' };
+    return changedFields.has(field) ? { color: '#202124' } : { color: '#aebfc6' };
   }
 
   async function handleLlmHelp() {
@@ -2056,19 +2064,19 @@ function ProjectDetailsModal({ details, onSave, onClose }) {
           <div className="modal-grid">
             <label>
               Student Name
-              <input style={defaultStyle('student_name')} value={form.student_name} onChange={(e) => setField('student_name', e.target.value)} placeholder="Jane Doe" />
+              <input style={defaultStyle('student_name')} value={form.student_name} onChange={(e) => handleChange('student_name', e.target.value)} placeholder="Jane Doe" />
             </label>
             <label>
               Supervisor
-              <input style={defaultStyle('supervisor')} value={form.supervisor} onChange={(e) => setField('supervisor', e.target.value)} placeholder="Prof. John Smith" />
+              <input style={defaultStyle('supervisor')} value={form.supervisor} onChange={(e) => handleChange('supervisor', e.target.value)} placeholder="Prof. John Smith" />
             </label>
             <label>
               University
-              <input style={defaultStyle('university')} value={form.university} onChange={(e) => setField('university', e.target.value)} placeholder="UC Riverside" />
+              <input style={defaultStyle('university')} value={form.university} onChange={(e) => handleChange('university', e.target.value)} placeholder="UC Riverside" />
             </label>
             <label>
               Department
-              <input style={defaultStyle('department')} value={form.department} onChange={(e) => setField('department', e.target.value)} placeholder="Computer Science" />
+              <input style={defaultStyle('department')} value={form.department} onChange={(e) => handleChange('department', e.target.value)} placeholder="Computer Science" />
             </label>
           </div>
 

@@ -140,14 +140,14 @@ export async function suggestMitigation(category, description, likelihood, impac
 export async function generateTimeline(durationMonths, activities) {
   const activityList = activities.map((a) => `- ${a.name}: ${a.months}`).join('\n');
   const result = await callGeminiJson(
-    `You are a research proposal expert. Given a research duration and a list of activities, generate a realistic, well-paced timeline. Return strict JSON:
+    `You are a research proposal expert. Given a research duration in weeks and a list of activities, generate a realistic, well-paced timeline. Return strict JSON:
 {
   "activities": [
-    { "name": "activity name", "months": "Month X-Y" }
+    { "name": "activity name", "months": "Week X" }
   ]
 }
-Distribute all activities across the full duration. Keep existing activity names. Return only the JSON.`,
-    `Total duration: ${durationMonths} months\nActivities:\n${activityList}`
+Distribute all activities across the full duration. Keep existing activity names. Use "Week X" or "Week X-Y" format. Return only the JSON.`,
+    `Total duration: ${durationMonths} weeks\nActivities:\n${activityList}`
   );
   return Array.isArray(result.activities) ? result.activities : activities;
 }
