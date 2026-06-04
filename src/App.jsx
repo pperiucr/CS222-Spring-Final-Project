@@ -4,13 +4,17 @@ import {
   ClipboardCheck,
   Download,
   FileText,
+  FolderOpen,
   ListChecks,
   Loader2,
   Play,
+  Plus,
   RefreshCw,
   Send,
   Sparkles,
-  Wand2
+  Trash2,
+  Wand2,
+  X
 } from 'lucide-react';
 
 const DEFAULT_REQUIREMENTS = `Proposal must include:
@@ -65,6 +69,25 @@ const TABS = [
 
 const MEMORY_KEY = 'proposal-agent-final-project-memory-v1';
 
+const RESEARCH_AREAS = ['AI/ML', 'Systems', 'Security', 'HCI', 'Networking', 'Databases', 'Theory', 'Bioinformatics', 'Other'];
+
+const EMPTY_PROJECT_DETAILS = {
+  research_title: '',
+  student_name: '',
+  university: '',
+  department: '',
+  supervisor: '',
+  degree_program: 'MS',
+  research_area: 'AI/ML',
+  keywords: [],
+  project_name: '',
+  budget: '',
+  timeline: '',
+  team_size: '',
+  special_requirements: '',
+  objectives: ['']
+};
+
 function App() {
   const [topicInput, setTopicInput] = useState('');
   const [project, setProject] = useState(EMPTY_PROJECT);
@@ -83,6 +106,8 @@ function App() {
   const [memorySavedAt, setMemorySavedAt] = useState('');
   const [memoryReady, setMemoryReady] = useState(false);
   const [refining, setRefining] = useState(false);
+  const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
+  const [projectDetails, setProjectDetails] = useState(EMPTY_PROJECT_DETAILS);
 
   const matrixStats = useMemo(() => {
     const rows = result?.complianceMatrix || [];
@@ -446,6 +471,27 @@ function App() {
 
       <section className="workspace single-pane">
         <section className="workflow-artifact">
+          <div className="project-details-bar">
+            <span className="project-details-label">Click to add back research project information:</span>
+            <button className="secondary" type="button" onClick={() => setProjectDetailsOpen(true)}>
+              <FolderOpen size={18} aria-hidden="true" />
+              Project Details
+            </button>
+            {projectDetails.research_title && (
+              <span className="project-details-pill">
+                {[projectDetails.research_title, projectDetails.student_name].filter(Boolean).join(' · ')}
+              </span>
+            )}
+          </div>
+
+          {projectDetailsOpen && (
+            <ProjectDetailsModal
+              details={projectDetails}
+              onSave={(saved) => { setProjectDetails(saved); setProjectDetailsOpen(false); }}
+              onClose={() => setProjectDetailsOpen(false)}
+            />
+          )}
+
           <div className="topic-launch">
             <label htmlFor="project-topic">
               Rough Idea
@@ -907,6 +953,203 @@ function compactResult(result) {
     evaluationReport: result.evaluationReport,
     questions: result.questions
   };
+}
+
+function ProjectDetailsModal({ details, onSave, onClose }) {
+  const [form, setForm] = useState({ ...EMPTY_PROJECT_DETAILS, ...details });
+  const [keywordInput, setKeywordInput] = useState('');
+
+  function setField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function addKeyword() {
+    const tag = keywordInput.trim().replace(/,+$/, '');
+    if (!tag || form.keywords.includes(tag)) { setKeywordInput(''); return; }
+    setForm((current) => ({ ...current, keywords: [...current.keywords, tag] }));
+    setKeywordInput('');
+  }
+
+  function removeKeyword(tag) {
+    setForm((current) => ({ ...current, keywords: current.keywords.filter((k) => k !== tag) }));
+  }
+
+  function handleKeywordKey(e) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeyword(); }
+  }
+
+  function setObjective(index, value) {
+    setForm((current) => {
+      const next = [...current.objectives];
+      next[index] = value;
+      return { ...current, objectives: next };
+    });
+  }
+
+  function addObjective() {
+    setForm((current) => ({ ...current, objectives: [...current.objectives, ''] }));
+  }
+
+  function removeObjective(index) {
+    setForm((current) => ({
+      ...current,
+      objectives: current.objectives.filter((_, i) => i !== index)
+    }));
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="Project Details">
+        <div className="modal-header">
+          <h2>Project Details</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          <label>
+            Research Title
+            <input value={form.research_title} onChange={(e) => setField('research_title', e.target.value)} placeholder="e.g. Federated Learning for Privacy-Preserving Healthcare" />
+          </label>
+
+          <div className="modal-grid">
+            <label>
+              Student Name
+              <input value={form.student_name} onChange={(e) => setField('student_name', e.target.value)} placeholder="Jane Doe" />
+            </label>
+            <label>
+              Supervisor
+              <input value={form.supervisor} onChange={(e) => setField('supervisor', e.target.value)} placeholder="Prof. John Smith" />
+            </label>
+            <label>
+              University
+              <input value={form.university} onChange={(e) => setField('university', e.target.value)} placeholder="UC Riverside" />
+            </label>
+            <label>
+              Department
+              <input value={form.department} onChange={(e) => setField('department', e.target.value)} placeholder="Computer Science" />
+            </label>
+          </div>
+
+          <div className="modal-grid">
+            <div className="modal-field-group">
+              <span className="modal-field-label">Degree Program</span>
+              <div className="radio-group">
+                {['MS', 'PhD'].map((deg) => (
+                  <label key={deg} className="radio-label">
+                    <input
+                      type="radio"
+                      name="degree_program"
+                      value={deg}
+                      checked={form.degree_program === deg}
+                      onChange={() => setField('degree_program', deg)}
+                    />
+                    {deg}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-field-group">
+              <span className="modal-field-label">Research Area</span>
+              <select
+                className="modal-select"
+                value={form.research_area}
+                onChange={(e) => setField('research_area', e.target.value)}
+              >
+                {RESEARCH_AREAS.map((area) => (
+                  <option key={area} value={area}>{area}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="modal-field-group">
+            <span className="modal-field-label">Keywords</span>
+            <div className="keyword-input-row">
+              <input
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={handleKeywordKey}
+                placeholder="Type a keyword and press Enter or comma"
+              />
+              <button className="secondary" type="button" onClick={addKeyword}>Add</button>
+            </div>
+            {form.keywords.length > 0 && (
+              <div className="keyword-tags">
+                {form.keywords.map((tag) => (
+                  <span key={tag} className="keyword-tag">
+                    {tag}
+                    <button type="button" onClick={() => removeKeyword(tag)} aria-label={`Remove ${tag}`}>
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="modal-grid">
+            <label>
+              Project Name
+              <input value={form.project_name} onChange={(e) => setField('project_name', e.target.value)} placeholder="Cloud Migration" />
+            </label>
+            <label>
+              Budget
+              <input value={form.budget} onChange={(e) => setField('budget', e.target.value)} placeholder="$500,000" />
+            </label>
+            <label>
+              Timeline
+              <input value={form.timeline} onChange={(e) => setField('timeline', e.target.value)} placeholder="6 months" />
+            </label>
+            <label>
+              Team Size
+              <input type="number" min="1" value={form.team_size} onChange={(e) => setField('team_size', e.target.value)} placeholder="5" />
+            </label>
+          </div>
+
+          <label>
+            Special Requirements
+            <textarea value={form.special_requirements} onChange={(e) => setField('special_requirements', e.target.value)} placeholder="e.g. HIPAA compliance, SOC 2, on-premise deployment..." />
+          </label>
+
+          <div className="modal-objectives">
+            <div className="modal-objectives-header">
+              <span>Objectives</span>
+              <button className="secondary" type="button" onClick={addObjective}>
+                <Plus size={15} aria-hidden="true" />
+                Add
+              </button>
+            </div>
+            {form.objectives.map((obj, index) => (
+              <div className="objective-row" key={index}>
+                <input
+                  value={obj}
+                  onChange={(e) => setObjective(index, e.target.value)}
+                  placeholder={`Objective ${index + 1}`}
+                />
+                <button
+                  className="secondary icon-button"
+                  type="button"
+                  disabled={form.objectives.length === 1}
+                  onClick={() => removeObjective(index)}
+                  aria-label="Remove objective"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave(form)}>Save Details</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function formatSavedAt(value) {
