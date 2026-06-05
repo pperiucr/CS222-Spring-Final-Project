@@ -923,8 +923,9 @@ function App() {
                 { label: '2b. Hypothesis',             key: 'hypothesis',        full: false },
                 { label: '2c. Motivation',             key: 'motivation',        full: true  },
                 { label: '3a. Methodology',            key: 'methodology_text', full: true  },
-                { label: '3b. Tools',                  key: 'tools',            full: false },
-                { label: '3c. Contributions',          key: 'contributions',    full: false },
+                { label: '3b. Data Source',            key: 'data_source',      full: false },
+                { label: '3c. Tools',                  key: 'tools',            full: false },
+                { label: '3d. Contributions',          key: 'contributions',    full: false },
                 { label: '4. Timeline',                key: 'timeline_budget',  full: true  },
                 { label: '5. Risks and Mitigation',    key: 'risks_mitigation', full: true  },
                 { label: '6. References',              key: 'references',       full: true  },
@@ -1646,6 +1647,7 @@ function App() {
                 setMethodologyData(data);
                 updateOutput({
                   methodology_text: data.generated_methodology || '',
+                  data_source: data.data_source || '',
                   tools: (data.tools || []).join(', '),
                   contributions: (data.contributions || []).filter(Boolean).map((c, i) => `${i + 1}. ${c}`).join('\n')
                 });

@@ -1120,6 +1120,7 @@ export function buildLatexFromOutput(output) {
   const hypothesis       = clean(output.hypothesis);
   const motivation       = clean(output.motivation);
   const methodology      = clean(output.methodology_text);
+  const dataSource       = clean(output.data_source);
   const tools            = clean(output.tools);
   const contributions    = clean(output.contributions);
   const timeline         = clean(output.timeline_budget);
@@ -1329,8 +1330,9 @@ ${hypothesis ? `
 \\section{Hypothesis}
 ${hypothesisToItemize(hypothesis)}
 ` : ''}
-${(methodology || tools) ? `
+${(methodology || dataSource || tools) ? `
 \\section{Methodology}
+${dataSource ? `\\textbf{Data Source:} ${escapeLatex(dataSource)}\\medskip\n` : ''}
 ${methodology ? methodologyToItemize(methodology) : ''}
 ${tools ? `
 \\medskip
