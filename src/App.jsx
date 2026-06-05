@@ -901,6 +901,24 @@ function App() {
             </div>
           </div>
 
+          <div className="memory-bar">
+            <div className="memory-bar-info">
+              <strong>Workspace Memory</strong>
+              <span>{memorySavedAt ? `Last saved ${formatSavedAt(memorySavedAt)}` : 'Not saved yet'}</span>
+            </div>
+            <div className="memory-actions">
+              <button className="secondary" type="button" onClick={() => saveMemory()}>
+                Save
+              </button>
+              <button className="secondary" type="button" onClick={() => loadSavedMemory()}>
+                Reload
+              </button>
+              <button className="secondary" type="button" onClick={clearSavedMemory}>
+                Clear
+              </button>
+            </div>
+          </div>
+
           <div className="review-dashboard-section">
             <div className="review-dashboard-header">
               <h2 className="review-dashboard-heading">Review Dashboard</h2>
@@ -1421,24 +1439,6 @@ function App() {
               <ClipboardCheck size={16} aria-hidden="true" />
               Review Checklist
             </button>
-          </div>
-
-          <div className="memory-bar">
-            <div className="memory-bar-info">
-              <strong>Workspace Memory</strong>
-              <span>{memorySavedAt ? `Last saved ${formatSavedAt(memorySavedAt)}` : 'Not saved yet'}</span>
-            </div>
-            <div className="memory-actions">
-              <button className="secondary" type="button" onClick={() => saveMemory()}>
-                Save
-              </button>
-              <button className="secondary" type="button" onClick={() => loadSavedMemory()}>
-                Reload
-              </button>
-              <button className="secondary" type="button" onClick={clearSavedMemory}>
-                Clear
-              </button>
-            </div>
           </div>
 
           {checklistOpen && (
