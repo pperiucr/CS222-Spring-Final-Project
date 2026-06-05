@@ -1159,6 +1159,22 @@ export function buildLatexFromOutput(output) {
     return `\\begin{tabularx}{\\linewidth}{${colSpec}}\n\\hline\n\\rowcolor{accorange}${hdr} \\\\\n\\hline\n${body}\n\\hline\n\\end{tabularx}`;
   }
 
+  // render hypothesis text as a bulleted list, handling both:
+  //   "H1: text\nH2: text"  (newline-separated with H-labels)
+  //   "1. text\n2. text"    (numbered lines from modal save)
+  //   "H1: text H2: text"   (single-line from corrections)
+  function hypothesisToItemize(text) {
+    const s = String(text || '').trim();
+    // split on H1/H2/H3 markers wherever they appear (inline or newline)
+    const parts = s.split(/\bH\d+[:.]?\s+/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      return `\\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]\n${parts.map(p => `\\item ${escapeLatex(p)}`).join('\n')}\n\\end{itemize}`;
+    }
+    // fall back to line-by-line, stripping "1." / "2." prefixes
+    const lines = s.split('\n').map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
+    return `\\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]\n${lines.map(l => `\\item ${escapeLatex(l)}`).join('\n')}\n\\end{itemize}`;
+  }
+
   // parse "Key: Value" or "Key — Value" lines into table rows
   function parseKVLines(text) {
     return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
@@ -1276,7 +1292,7 @@ ${motivation ? `\n\\medskip\n${latexParagraph(motivation)}` : ''}
 ` : ''}
 ${hypothesis ? `
 \\section{Hypothesis}
-${toItemize(hypothesis.replace(/\bH\d+[:.]?\s*/g, ''))}
+${hypothesisToItemize(hypothesis)}
 ` : ''}
 ${(methodology || tools) ? `
 \\section{Methodology}
