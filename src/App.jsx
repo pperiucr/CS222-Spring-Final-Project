@@ -68,6 +68,136 @@ function scoreColor(score) {
   return '#ef4444';
 }
 
+function computeReviewScores(proposalOutput) {
+  const po = proposalOutput || {};
+  const get = (k) => (po[k] || '').trim();
+
+  const fieldWeights = [
+    ['research_title', 10], ['objective', 8], ['problem_statement', 12],
+    ['hypothesis', 8], ['motivation', 8], ['methodology_text', 15],
+    ['tools', 5], ['contributions', 8], ['timeline_budget', 8],
+    ['risks_mitigation', 8], ['references', 10]
+  ];
+
+  // COMPLETENESS — weighted by field importance
+  let completenessRaw = 0;
+  for (const [f, w] of fieldWeights) {
+    const len = get(f).length;
+    if (len >= 50) completenessRaw += w;
+    else if (len >= 10) completenessRaw += w * 0.4;
+  }
+  const completeness = Math.round(completenessRaw);
+
+  // METHODOLOGY — length + keyword coverage + tools + contributions
+  const meth = get('methodology_text');
+  const tools = get('tools');
+  const contribs = get('contributions');
+  const methKws = ['experiment', 'evaluation', 'baseline', 'dataset', 'metric', 'approach', 'design', 'analysis', 'measure', 'compare', 'implement', 'test', 'model'];
+  const methKwHits = methKws.filter(k => meth.toLowerCase().includes(k)).length;
+  const methodology = Math.round(
+    Math.min(meth.length / 500, 1) * 50 +
+    Math.min(methKwHits / methKws.length, 1) * 30 +
+    (tools.length > 5 ? 10 : 0) +
+    (contribs.length > 20 ? 10 : 0)
+  );
+
+  // NOVELTY — gap/novelty keywords + hypothesis specificity + distinct contributions
+  const noveltyCorpus = [get('problem_statement'), get('contributions'), get('hypothesis'), get('motivation')].join(' ').toLowerCase();
+  const noveltyKws = ['novel', 'new', 'propose', 'gap', 'limitation', 'existing', 'challenge', 'address', 'improve', 'advance', 'lack', 'overcome', 'beyond'];
+  const noveltyHits = noveltyKws.filter(k => noveltyCorpus.includes(k)).length;
+  const contribLines = get('contributions').split('\n').filter(l => l.trim().length > 15);
+  const novelty = Math.min(100, Math.round(
+    Math.min(noveltyHits / 5, 1) * 50 +
+    Math.min(contribLines.length / 3, 1) * 30 +
+    (get('hypothesis').length > 30 ? 20 : 0)
+  ));
+
+  // REFERENCES — count + years present + DOI/URL present
+  const refText = get('references');
+  const refLines = refText.split('\n').filter(l => l.trim().length > 15);
+  const hasYears = /\b(19|20)\d{2}\b/.test(refText);
+  const hasDoi = /doi\.org|10\.\d{4}|https?:\/\//i.test(refText);
+  const references = Math.min(100, Math.round(
+    Math.min(refLines.length / 6, 1) * 60 +
+    (hasYears ? 20 : 0) +
+    (hasDoi ? 20 : 0)
+  ));
+
+  // WRITING QUALITY — sentence length normality + field coverage
+  const allText = fieldWeights.map(([f]) => get(f)).join(' ');
+  const words = allText.split(/\s+/).filter(Boolean);
+  const sentences = allText.split(/[.!?]+/).filter(s => s.trim().length > 5);
+  const avgSentLen = sentences.length > 0 ? words.length / sentences.length : 0;
+  const filledMeaningfully = fieldWeights.filter(([f]) => get(f).length >= 40).length;
+  const sentQuality = avgSentLen >= 8 && avgSentLen <= 35 ? 40 : (avgSentLen > 0 ? 20 : 0);
+  const writingQuality = Math.round(sentQuality + (filledMeaningfully / fieldWeights.length) * 60);
+
+  // CONSISTENCY — title keyword overlap with body + hypothesis/problem alignment
+  const titleWords = get('research_title').toLowerCase().split(/\W+/).filter(w => w.length > 4);
+  const bodyForConsistency = [get('problem_statement'), get('methodology_text'), get('motivation'), get('objective')].join(' ').toLowerCase();
+  const titleHitRatio = titleWords.length > 0 ? titleWords.filter(w => bodyForConsistency.includes(w)).length / titleWords.length : 0;
+  const hypothesisAligned = get('hypothesis').length > 20 && get('problem_statement').length > 20;
+  const consistency = Math.round(
+    titleHitRatio * 60 +
+    (hypothesisAligned ? 25 : 0) +
+    (meth.length > 0 && get('timeline_budget').length > 0 ? 15 : 0)
+  );
+
+  // OVERALL — weighted average
+  const overall = Math.round(
+    completeness * 0.20 +
+    methodology * 0.20 +
+    novelty * 0.15 +
+    references * 0.15 +
+    writingQuality * 0.15 +
+    consistency * 0.15
+  );
+
+  // ISSUES — based on actual content gaps
+  const issues = [];
+  const emptyFields = fieldWeights.filter(([f]) => get(f).length < 10).map(([f]) => f.replace(/_/g, ' '));
+  if (emptyFields.length > 0) {
+    issues.push({
+      field: emptyFields[0].replace(/ /g, '_'),
+      severity: emptyFields.length >= 4 ? 'high' : 'medium',
+      message: `${emptyFields.length} section(s) empty: ${emptyFields.slice(0, 3).join(', ')}${emptyFields.length > 3 ? '…' : ''}.`
+    });
+  }
+  if (meth.length > 0 && meth.length < 150) {
+    issues.push({ field: 'methodology_text', severity: 'medium', message: 'Methodology is too brief — expand with experimental design, evaluation metrics, and baselines.' });
+  } else if (meth.length > 0 && methKwHits < 3) {
+    issues.push({ field: 'methodology_text', severity: 'low', message: 'Methodology lacks key terms (evaluation, baselines, metrics). Add more experimental detail.' });
+  }
+  if (refText.length > 0 && refLines.length < 3) {
+    issues.push({ field: 'references', severity: 'medium', message: `Only ${refLines.length} reference(s) found. A strong proposal needs at least 5 citations.` });
+  } else if (refText.length > 0 && !hasYears) {
+    issues.push({ field: 'references', severity: 'low', message: 'References appear to be missing publication years. Ensure full citation format.' });
+  }
+  if (contribs.length > 0 && contribLines.length < 2) {
+    issues.push({ field: 'contributions', severity: 'low', message: 'List at least 2–3 distinct contributions to strengthen the novelty claim.' });
+  }
+  if (get('hypothesis').length > 0 && get('hypothesis').length < 60) {
+    issues.push({ field: 'hypothesis', severity: 'low', message: 'Hypotheses are too vague. Make them specific and measurable with expected outcomes.' });
+  }
+  if (titleWords.length > 0 && titleHitRatio < 0.4) {
+    issues.push({ field: 'research_title', severity: 'low', message: 'Title keywords do not appear consistently in the proposal body — check for alignment.' });
+  }
+
+  const clamp = (v) => Math.min(100, Math.max(0, v));
+  return {
+    overallScore: clamp(overall),
+    dimensions: {
+      completeness: clamp(completeness),
+      methodology: clamp(methodology),
+      novelty: clamp(novelty),
+      references: clamp(references),
+      writingQuality: clamp(writingQuality),
+      consistency: clamp(consistency)
+    },
+    issues: issues.slice(0, 6)
+  };
+}
+
 const RESEARCH_AREAS = ['AI/ML', 'Systems', 'Security', 'HCI', 'Networking', 'Databases', 'Theory', 'Bioinformatics', 'Other'];
 
 const EMPTY_PROJECT_DETAILS = {
@@ -119,7 +249,6 @@ function App() {
   const [risksData, setRisksData] = useState({ savedRisks: [] });
   const [referencesData, setReferencesData] = useState({ savedRefs: [] });
   const [generatePopupOpen, setGeneratePopupOpen] = useState(false);
-  const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewResult, setReviewResult] = useState(null);
   const [reviewIssuesOpen, setReviewIssuesOpen] = useState(false);
   const [autoFixing, setAutoFixing] = useState(false);
@@ -143,18 +272,10 @@ function App() {
     setProposalOutput((prev) => ({ ...prev, ...fields }));
   }
 
-  async function handleReviewProposal() {
-    setReviewLoading(true);
+  function handleReviewProposal() {
     setReviewError('');
-    try {
-      const result = await postJson('/api/review/proposal', { proposalOutput });
-      setReviewResult(result);
-      setReviewIssuesOpen(false);
-    } catch (err) {
-      setReviewError(err.message || 'Review failed.');
-    } finally {
-      setReviewLoading(false);
-    }
+    setReviewResult(computeReviewScores(proposalOutput));
+    setReviewIssuesOpen(false);
   }
 
   async function handleAutoFix() {
@@ -167,9 +288,9 @@ function App() {
         issues: reviewResult.issues.filter((i) => i.field !== 'general')
       });
       if (Object.keys(fixes).length > 0) {
+        const newOutput = { ...proposalOutput, ...fixes };
         updateOutput(fixes);
-        const updated = await postJson('/api/review/proposal', { proposalOutput: { ...proposalOutput, ...fixes } });
-        setReviewResult(updated);
+        setReviewResult(computeReviewScores(newOutput));
       }
     } catch (err) {
       setReviewError(err.message || 'Auto-fix failed.');
@@ -616,9 +737,9 @@ function App() {
           <div className="review-dashboard-section">
             <div className="review-dashboard-header">
               <h2 className="review-dashboard-heading">Review Dashboard</h2>
-              <button className="primary" type="button" onClick={handleReviewProposal} disabled={reviewLoading}>
-                {reviewLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ClipboardCheck size={16} aria-hidden="true" />}
-                {reviewLoading ? 'Reviewing…' : 'Review Proposal'}
+              <button className="primary" type="button" onClick={handleReviewProposal}>
+                <ClipboardCheck size={16} aria-hidden="true" />
+                Review Proposal
               </button>
             </div>
 
