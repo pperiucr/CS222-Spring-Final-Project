@@ -41,7 +41,7 @@ Key env vars:
 
 ## Architecture
 
-Full-stack proposal-writing agent app: React + Vite frontend proxied to an Express API backend. The app has two parallel interaction patterns that feed the same "Research Proposal Draft" output section.
+Full-stack proposal-writing agent app: React + Vite frontend proxied to an Express API backend. The app has two parallel interaction patterns that feed the same "Research Proposal Draft" output section, followed by a multi-agent Review Dashboard.
 
 ### Two interaction paths
 
@@ -64,14 +64,60 @@ The "Generate Proposal" button (bottom of draft section) opens `GenerateFormatPo
 
 The legacy "Generate Proposal" path in the suggestion workflow calls `POST /api/proposal` → `generateProposal()` which uses the LLM (or local fallback) to generate LaTeX + a `complianceMatrix` + `evaluationReport`.
 
+### Workspace Memory bar
+
+Sits immediately below the Research Proposal Draft section. Save / Reload / Clear persist the full proposal state to `localStorage` under `proposal-agent-final-project-memory-v1`. The snapshot covers both Path A state (proposalOutput, completedSteps, projectDetails, researchProblemData, methodologyData, timelineActivities, risksData, referencesData) and Path B state (topic, project, fieldSuggestions, decisions, etc.). Auto-save fires on any state change once the initial load has completed.
+
+### Review Dashboard
+
+Sits below the Research Proposal Draft and Workspace Memory bar. "Review Proposal" runs `computeReviewScores(proposalOutput)` — a **client-side** function that reads the 11 `proposalOutput` fields and produces an integer score for each of six dimensions (Completeness, Methodology, Novelty, References, Writing Quality, Consistency) plus an overall score. No API call is made for this step.
+
+The dashboard shows:
+- An overall score bar with color coding (green ≥ 85, amber ≥ 65, red below)
+- Six dimension score bars
+- "View Issues" — lists detected field-level issues
+- "Auto Fix" — calls `POST /api/review/auto-fix` → `autoFixField()` to patch fields inline
+
+### 6 Review Agents
+
+Each agent is an independent LLM call that appears as its own card below the Review Dashboard. All agents call `POST /api/review/<name>` → the corresponding function in `claudeRefine.js`. Each agent section includes:
+- A **Run Agent** button (or **Run Consolidation** for the Final agent)
+- A collapsible **Prompt** panel showing the exact system prompt
+- Structured results rendered with agent-specific UI
+- A **Correct Proposal** button that appears once results are available
+
+| # | Agent | Route | What It Checks |
+|---|---|---|---|
+| 1 | Completeness Reviewer | `POST /api/review/completeness` | Presence and quality of all 11 proposal sections |
+| 2 | Research Quality Reviewer | `POST /api/review/quality` | Novelty, Research Gap, Contribution, Scientific Merit |
+| 3 | Methodology Reviewer *(Critical)* | `POST /api/review/methodology` | Dataset, Experimental Design, Evaluation Metrics, Baseline Comparisons, Reproducibility |
+| 4 | Consistency Reviewer | `POST /api/review/consistency` | Cross-section alignment (title ↔ contributions, methodology ↔ timeline, etc.) |
+| 5 | CS Academic Reviewer | `POST /api/review/cs-academic` | Technical Clarity, Research Gap Articulation, Methodology Completeness, Problem–Method Alignment, Academic Writing Quality, CS Research Standards |
+| Final | Consolidation Agent | `POST /api/review/consolidate` | Aggregates all prior agent reports, removes duplicates, outputs Top 5 prioritised improvements |
+
+### Correction workflow
+
+After any review agent produces results, a **"Correct Proposal"** button appears. Clicking it calls `POST /api/review/correct` → `correctFromReview(proposalOutput, agentName, feedback)`. The LLM returns `{ corrections: { field: revisedText }, explanation }` — only the fields the reviewer flagged. A correction preview panel then shows:
+- A brief explanation of the changes
+- Each corrected field with its revised text
+- **Accept Changes** — applies all corrections to `proposalOutput` via `updateOutput()`
+- **Discard** — clears the preview without saving
+
+### Export Actions bar
+
+Centered row of three buttons below the Final Consolidation Agent:
+- **LaTeX** — calls `POST /api/generate-from-output` and triggers a `.tex` file download
+- **PDF** — opens `GenerateFormatPopup` (live PDF preview + download)
+- **Review Checklist** — opens a modal summarising 6-step completion status and all 11 proposal section statuses
+
 ### Key files
 
 | File | Role |
 |---|---|
-| `src/App.jsx` | Entire frontend — all state, 6 modal components, `ProposalStepper`, `GenerateFormatPopup`, and the main App component. No sub-files. |
-| `server/index.js` | Express server; 17 API routes covering agent workflow, all 6 stepper section helpers, DOI lookup, LaTeX assembly, and PDF export |
+| `src/App.jsx` | Entire frontend — all state, 6 modal components, `ProposalStepper`, `GenerateFormatPopup`, `CorrectionPanel`, and the main App component. No sub-files. |
+| `server/index.js` | Express server; 28 API routes covering agent workflow, all 6 stepper section helpers, DOI lookup, LaTeX assembly, PDF export, 6 review agents, auto-fix, and proposal correction |
 | `server/proposalGenerator.js` | `startAgentSession`, `answerAgentQuestion`, `generateProposal`, `buildLatexFromOutput`; provider routing (Gemini vs OpenAI-compatible); deterministic local fallback when `LLM_API_KEY` or `LLM_MODEL` is absent |
-| `server/claudeRefine.js` | All per-section LLM helpers called by the 6-step modal popups; respects `MOCK_LLM=true`; `fetchDoiReference` hits CrossRef first |
+| `server/claudeRefine.js` | All per-section LLM helpers called by the 6-step modal popups, all 6 review agent functions, `autoFixField`, and `correctFromReview`; respects `MOCK_LLM=true`; `fetchDoiReference` hits CrossRef first |
 | `server/pdfExport.js` | Converts LaTeX to PDF via `tectonic` CLI; sanitizes `\includegraphics` to inline placeholders |
 
 ### LLM provider routing (proposalGenerator.js)
@@ -80,7 +126,7 @@ Detects provider from `LLM_PROVIDER` env var or by matching the URL against `gen
 
 ### claudeRefine.js mock mode
 
-`MOCK_LLM=true` short-circuits every exported function in `claudeRefine.js` to return a static `MOCK` object (hard-coded network-ops themed sample text). The `fetchDoiReference` function always tries CrossRef first regardless of `MOCK_LLM`.
+`MOCK_LLM=true` short-circuits every exported function in `claudeRefine.js` to return a static `MOCK` object (hard-coded network-ops themed sample data). The `fetchDoiReference` function always tries CrossRef first regardless of `MOCK_LLM`. The `MOCK` object includes entries for all 6 review agents (`completeness`, `quality`, `methodology`, `consistency`, `csReview`, `consolidation`), the review dashboard (`review`), and the correction workflow (`corrections`, `methodologyText`).
 
 ### Frontend state
 
@@ -89,8 +135,11 @@ The main `App` component holds all state. Key state buckets:
 - `proposalOutput` — flat object with 11 string fields that populate the "Research Proposal Draft" section
 - `completedSteps` — `{ projectDetails, researchProblem, methodology, timeline, risks, references }` booleans driving stepper appearance
 - `project` / `fieldSuggestions` / `decisions` — Path B (LLM suggestion workflow) state
+- `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API)
+- Per-agent state triplets: `[agent]Loading` / `[agent]Result` / `[agent]Error` for each of the 6 review agents
+- Per-agent correction state pairs: `[agent]Correcting` / `[agent]Corrections` for each of the 6 review agents
 
-Workspace state (Path B only: topic, project, suggestions, decisions, run log, artifacts) is serialized to `localStorage` under `proposal-agent-final-project-memory-v1`. The 6-step modal data and `proposalOutput` are not persisted to localStorage.
+Workspace state (all Path A + Path B fields) is serialized to `localStorage` under `proposal-agent-final-project-memory-v1`. Auto-save fires on any change once the initial load completes.
 
 ### PDF compilation
 

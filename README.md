@@ -1,28 +1,81 @@
 # Research Proposal Agent
 
-A full-stack web app that guides a researcher through writing a structured research proposal using a 6-step workflow assisted by an LLM. It generates a LaTeX document and compiles it to PDF.
+A full-stack web app that guides a researcher through writing a structured research proposal using a 6-step workflow assisted by an LLM. It then runs a multi-agent review pipeline that scores, critiques, and automatically corrects the draft. The final output is a compiled LaTeX/PDF document.
 
 ## What It Does
 
-The app provides two parallel ways to build a proposal:
+The app has three main stages: **draft**, **review**, and **export**.
+
+---
+
+### Stage 1 — Draft (Two Paths)
 
 **Primary: 6-step guided stepper**
+
 Each step opens a modal form. Filling in and saving a step populates the corresponding section of the "Research Proposal Draft" panel. LLM-powered helper buttons appear inside each modal.
 
 | Step | What You Fill In | LLM Helpers Available |
 |---|---|---|
 | 1. Project Details | Title, student/supervisor info, degree, research area, budget, objectives | Generate title and objective from a rough idea |
-| 2. Research Problem | Problem description, motivation, primary question, hypotheses | Enhance problem statement, generate motivation, suggest question, suggest hypotheses |
+| 2. Research Problem | Problem description, motivation, primary question, hypotheses | Enhance problem, generate motivation, suggest question and hypotheses |
 | 3. Methodology | Research type, data source, tools, experiment design, contributions | Generate full methodology paragraph |
 | 4. Timeline | Duration (weeks), team size, budget, activity list | Generate a distributed timeline |
 | 5. Risks & Mitigation | Risk category, description, likelihood, impact, mitigation | AI-structure a risk description, suggest a mitigation strategy |
 | 6. References | DOI lookup (via CrossRef) or manual entry | CrossRef public API; LLM fallback if CrossRef fails |
 
 **Secondary: LLM suggestion workflow**
+
 Enter a rough idea and click "Structure Idea" to have the LLM return suggested field values and decision cards. Accept or skip suggestions, submit custom notes, then draft a proposal from the assembled fields.
 
-**Generate Proposal**
-The "Generate Proposal" button assembles all draft section content into a LaTeX document and attempts to compile it to PDF via Tectonic. A preview popup shows the PDF inline with download buttons for PDF and LaTeX source.
+**Workspace Memory**
+
+A Save / Reload / Clear bar sits below the Research Proposal Draft section. Saving snapshots all draft state (all 6 stepper forms + the proposal output) and the LLM suggestion workflow state to browser localStorage. Reloading restores the last saved snapshot. Auto-save fires on every state change.
+
+---
+
+### Stage 2 — Review Dashboard + 6 AI Review Agents
+
+After filling in the draft, click **Review Proposal** to run a client-side analysis of the 11 proposal fields. No API call is made — the score is computed instantly from the actual text content and reported across six dimensions:
+
+| Dimension | What Is Measured |
+|---|---|
+| Completeness | Are all 11 fields present and non-trivial? |
+| Methodology | Does the methodology describe experiment design, tools, and approach? |
+| Novelty | Does the proposal contain research-gap and contribution language? |
+| References | Are there multiple properly-formatted citations? |
+| Writing Quality | Are sentences complete and professional in length? |
+| Consistency | Do title keywords appear in the problem statement? |
+
+**View Issues** lists field-level problems. **Auto Fix** calls the LLM to patch flagged fields in place.
+
+**5 Specialist Review Agents + 1 Consolidation Agent**
+
+Each agent is an independent LLM call. Run them in any order after the review dashboard.
+
+| Agent | What It Checks | Output |
+|---|---|---|
+| 1 — Completeness Reviewer | Presence and quality of all 11 sections | Present / Weak / Missing lists with detail |
+| 2 — Research Quality Reviewer | Novelty, Research Gap, Contribution, Scientific Merit | Per-dimension issue + suggestion cards |
+| 3 — Methodology Reviewer *(Critical)* | Dataset, Experimental Design, Evaluation Metrics, Baseline Comparisons, Reproducibility | Pass / Warn / Fail cards with weakness + recommendation |
+| 4 — Consistency Reviewer | Cross-section alignment (title ↔ contributions, methodology ↔ timeline, etc.) | Side-by-side inconsistency cards with severity |
+| 5 — CS Academic Reviewer | Technical Clarity, Research Gap Articulation, Methodology Completeness, Problem–Method Alignment, Academic Writing Quality, CS Research Standards | Overall score (0–100), dimension scores, major recommendations |
+| Final — Consolidation Agent | All prior agent reports combined | Top 5 prioritised improvements, deduped across agents |
+
+**Correct Proposal + Accept / Discard**
+
+After any agent produces results, a **"Correct Proposal"** button appears. Clicking it sends the review feedback to the LLM, which generates revised text for only the affected proposal fields. A correction preview panel shows each revised field; **Accept Changes** applies them to the draft, **Discard** clears the preview without saving.
+
+---
+
+### Stage 3 — Export
+
+A centered action bar below the Final Consolidation Agent provides:
+
+- **LaTeX** — downloads the assembled `.tex` source file
+- **PDF** — opens a live preview popup and compiles via Tectonic, with download buttons for both PDF and LaTeX
+- **Review Checklist** — modal summarising 6-step completion status and all 11 proposal field statuses
+
+---
 
 ## How to Run
 
@@ -52,7 +105,7 @@ LLM_MODEL=gemini-2.5-flash
 
 Without `LLM_API_KEY` and `LLM_MODEL` the app runs in local-fallback mode — all proposal generation uses deterministic templates and no API calls are made.
 
-Set `MOCK_LLM=true` to short-circuit the per-section modal helpers (`claudeRefine.js`) with hard-coded sample responses. Useful for UI development without an API key.
+Set `MOCK_LLM=true` to short-circuit the per-section modal helpers and all review agent API calls with hard-coded sample responses. Useful for UI development without an API key.
 
 ## PDF Generation Requirement
 
@@ -60,16 +113,68 @@ Tectonic must be installed and available on `PATH` for PDF compilation to work. 
 
 Install Tectonic: https://tectonic-typesetting.github.io/
 
-## How to Use (6-Step Workflow)
+## How to Use
 
-1. Open the app and click **Project Details** (step 1 in the stepper). Fill in your research title, student info, and objectives. Use "LLM Generate" to draft a title and objective from a rough idea. Click Save.
+### Writing the Proposal
+
+1. Open the app and click **Project Details** (step 1). Fill in your research title, student info, and objectives. Use "LLM Generate" to draft a title and objective from a rough idea. Click Save.
 2. Click **Research Problem** (step 2). Describe the problem, then use the AI buttons to enhance it, generate a motivation paragraph, and suggest a research question and hypotheses. Click Save.
 3. Click **Methodology** (step 3). Select a research type, describe your data source, add tools as tags, and describe the experiment. Click "Generate Methodology" to produce a paragraph. Add expected contributions. Click Save.
 4. Click **Timeline** (step 4). Set the duration in weeks and list your activities. Use "Generate Timeline" to distribute activities across the duration. Click Save.
 5. Click **Risks & Mitigation** (step 5). Add one or more risks with category, description, likelihood, and impact. Use "AI Structure Risk" and "AI Suggest Mitigation" to refine each entry. Click Save.
 6. Click **References** (step 6). Enter a DOI and click "Fetch" to auto-populate a formatted citation from CrossRef, or type one manually. Add as many references as needed. Click Save.
-7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly.
-8. Click **Generate Proposal** to produce LaTeX and a compiled PDF. Download either format.
+7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly inline.
+8. Click **Save** in the Workspace Memory bar to persist all draft state to localStorage.
+
+### Reviewing and Correcting
+
+9. Click **Review Proposal** in the Review Dashboard. Scores appear instantly — no API call needed.
+10. Click **View Issues** to see which fields need attention, or **Auto Fix** to let the LLM patch flagged fields automatically.
+11. Run each review agent (Completeness → Research Quality → Methodology → Consistency → CS Academic) using its **Run Agent** button. Read the structured feedback in each card.
+12. For any agent with issues, click **Correct Proposal** to have the LLM generate targeted revisions. Review the correction preview and click **Accept Changes** to apply them, or **Discard** to ignore.
+13. Once all agents have run, click **Run Consolidation** in the Final Consolidation Agent to get a unified, prioritised Top 5 improvement list. Apply corrections from here as well if desired.
+
+### Exporting
+
+14. Click **LaTeX** to download the assembled `.tex` source, or **PDF** to open the live preview popup and download the compiled PDF.
+15. Click **Review Checklist** to verify all steps are complete before submitting.
+
+---
+
+## API Routes (28 total)
+
+| Route | Purpose |
+|---|---|
+| `GET /api/health` | Server status |
+| `POST /api/agent/start` | Start LLM suggestion workflow |
+| `POST /api/agent/answer` | Submit answer in suggestion workflow |
+| `POST /api/proposal` | Generate full proposal (legacy path) |
+| `POST /api/refine/title-intro` | LLM generate title and objective |
+| `POST /api/refine/problem` | Refine problem statement |
+| `POST /api/research/enhance-problem` | Enhance problem description |
+| `POST /api/research/motivation` | Generate motivation paragraph |
+| `POST /api/research/suggest-question` | Suggest primary research question |
+| `POST /api/research/suggest-hypotheses` | Suggest testable hypotheses |
+| `POST /api/research/generate-methodology` | Generate methodology paragraph |
+| `POST /api/research/generate-timeline` | Generate distributed timeline |
+| `POST /api/research/structure-risk` | AI-structure a risk description |
+| `POST /api/research/suggest-mitigation` | Suggest mitigation strategy |
+| `POST /api/research/fetch-doi` | Fetch reference from CrossRef / LLM |
+| `POST /api/research/generate-references` | Format references list |
+| `POST /api/research/validate-citations` | Validate citation style |
+| `POST /api/review/proposal` | Review proposal (legacy, LLM-based) |
+| `POST /api/review/auto-fix` | Auto-fix flagged fields |
+| `POST /api/review/completeness` | Agent 1: Completeness review |
+| `POST /api/review/quality` | Agent 2: Research quality review |
+| `POST /api/review/methodology` | Agent 3: Methodology review |
+| `POST /api/review/consistency` | Agent 4: Consistency review |
+| `POST /api/review/cs-academic` | Agent 5: CS academic review |
+| `POST /api/review/consolidate` | Final consolidation of all reviews |
+| `POST /api/review/correct` | LLM-generate corrections from review |
+| `POST /api/generate-from-output` | Assemble LaTeX from proposal output |
+| `POST /api/export/pdf` | Compile LaTeX to PDF via Tectonic |
+
+---
 
 ## Deadlines And Submission Requirements
 
@@ -77,7 +182,7 @@ All deadlines use Pacific Time.
 
 | Stage | Due Date | Submit | Notes |
 | --- | --- | --- | --- |
-| Stage 1: Initial Agent + Workflow Design | Friday, June 5, 2026, 11:59 PM | 5-minute presentation video, initial agent/prototype artifact, optional screenshots or interaction trace. | Stage 1 is graded from the video. The in-person presentation is mandatory but not separately graded; it is for showing motivation, ideas, goals, and peer feedback. Late submissions accepted until Sunday, June 7, 2026, 11:59 PM with a 20% penalty. |
+| Stage 1: Initial Agent + Workflow Design | Friday, June 5, 2026, 11:59 PM | 5-minute presentation video, initial agent/prototype artifact, optional screenshots or interaction trace. | Stage 1 is graded from the video. The in-person presentation is mandatory but not separately graded. Late submissions accepted until Sunday, June 7, 2026, 11:59 PM with a 20% penalty. |
 | Stage 2: Refined Agent + Workflow Usage | Friday, June 12, 2026, 11:59 PM | Refined agent/workflow, `workflow_usage.md`, run evidence, `AI_USAGE.md`. | Late submissions accepted until Sunday, June 14, 2026, 11:59 PM with a 20% penalty. |
 | Stage 3: Final Proposal | Friday, June 12, 2026, 11:59 PM | `proposal.pdf`, proposal source, references or source notes, figure/diagram source if applicable. | Late submissions accepted until Sunday, June 14, 2026, 11:59 PM with a 20% penalty. |
 
