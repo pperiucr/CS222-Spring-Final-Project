@@ -22,6 +22,46 @@ const MOCK = {
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  consolidation: {
+    top_improvements: [
+      {
+        rank: 1,
+        title: 'Add explicit research gap',
+        description: 'No section clearly states the gap in existing knowledge. Add a dedicated paragraph citing 2–3 papers and showing precisely where each falls short of the proposed approach.',
+        source_agents: ['Agent 1: Completeness', 'Agent 2: Research Quality'],
+        priority: 'critical'
+      },
+      {
+        rank: 2,
+        title: 'Strengthen evaluation methodology',
+        description: 'Quantitative metrics are entirely absent. Define Precision, Recall, F1 Score, Recovery Time, and Network Availability as primary success criteria, and specify the statistical tests that will validate results.',
+        source_agents: ['Agent 3: Methodology', 'Agent 5: CS Academic'],
+        priority: 'critical'
+      },
+      {
+        rank: 3,
+        title: 'Add RL baseline comparison',
+        description: 'No baseline methods are identified. Compare the proposed approach against rule-based diagnosis, static recovery, and existing RL-based SDN approaches to demonstrate novelty and measure improvement.',
+        source_agents: ['Agent 2: Research Quality', 'Agent 3: Methodology'],
+        priority: 'high'
+      },
+      {
+        rank: 4,
+        title: 'Include ethics discussion',
+        description: 'Proposals involving automated network control and operational data must address data privacy, potential misuse, and responsible deployment. Add a dedicated risks section covering these concerns.',
+        source_agents: ['Agent 5: CS Academic'],
+        priority: 'high'
+      },
+      {
+        rank: 5,
+        title: 'Expand expected contributions',
+        description: 'The stated contributions are too broad and overlap with existing literature. Enumerate 3–4 specific, testable contributions and tie each one directly to a research question or hypothesis.',
+        source_agents: ['Agent 1: Completeness', 'Agent 2: Research Quality', 'Agent 5: CS Academic'],
+        priority: 'medium'
+      }
+    ],
+    summary: 'The proposal has a solid foundation but requires significant strengthening in evaluation methodology and novelty articulation before it would be competitive for academic submission.'
+  },
   csReview: {
     overall_score: 86,
     dimensions: [
@@ -451,6 +491,54 @@ export async function reviewProposal(proposalOutput) {
     };
   }
   return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+const CONSOLIDATION_SYSTEM_PROMPT = `You are a final consolidation agent. You have received a research proposal and review reports from multiple specialized agents. Your task is to synthesize all findings into the five most impactful improvements the author should make.
+
+Steps:
+1. Collect all issues, weaknesses, and recommendations from every review report
+2. Remove duplicates — if multiple agents flag the same problem, it counts as one item and should list all sources
+3. Rank remaining issues by their impact on proposal quality (blocking issues first)
+4. Output exactly 5 top improvements, ranked 1 (most critical) to 5
+
+Each improvement must be:
+- Specific and actionable (not generic advice)
+- Tied to actual content in the proposal
+- Accompanied by source agents that raised it
+
+Return strict JSON:
+{
+  "top_improvements": [
+    {
+      "rank": 1,
+      "title": "Short action title (4–7 words)",
+      "description": "Specific actionable fix in 2–3 sentences referencing proposal content.",
+      "source_agents": ["Agent 1: Completeness", "Agent 3: Methodology"],
+      "priority": "critical|high|medium"
+    },
+    ... exactly 5 items ...
+  ],
+  "summary": "1–2 sentence overall assessment of proposal readiness."
+}
+
+priority: "critical" = must fix before submission, "high" = strongly recommended, "medium" = would improve quality.
+Return only the JSON object.`;
+
+export async function consolidateReviews(proposalOutput, reviews) {
+  if (IS_MOCK) return MOCK.consolidation;
+  const proposalSummary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  const reviewSummary = Object.entries(reviews || {})
+    .filter(([, v]) => v)
+    .map(([name, result]) => `=== ${name} ===\n${JSON.stringify(result)}`)
+    .join('\n\n');
+  if (!proposalSummary.trim() && !reviewSummary.trim()) return MOCK.consolidation;
+  return callGeminiJson(
+    CONSOLIDATION_SYSTEM_PROMPT,
+    `PROPOSAL:\n${proposalSummary}\n\nREVIEW REPORTS:\n${reviewSummary}`
+  );
 }
 
 const CS_ACADEMIC_REVIEW_SYSTEM_PROMPT = `You are a Computer Science faculty member conducting a thorough academic review of a research proposal.

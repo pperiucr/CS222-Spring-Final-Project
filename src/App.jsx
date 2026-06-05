@@ -285,6 +285,10 @@ function App() {
   const [csReviewResult, setCsReviewResult] = useState(null);
   const [csReviewError, setCsReviewError] = useState('');
   const [csReviewPromptOpen, setCsReviewPromptOpen] = useState(false);
+  const [consolidationLoading, setConsolidationLoading] = useState(false);
+  const [consolidationResult, setConsolidationResult] = useState(null);
+  const [consolidationError, setConsolidationError] = useState('');
+  const [consolidationPromptOpen, setConsolidationPromptOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -328,6 +332,25 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleConsolidation() {
+    setConsolidationLoading(true);
+    setConsolidationError('');
+    try {
+      const reviews = {};
+      if (completenessResult) reviews['Agent 1: Completeness'] = completenessResult;
+      if (qualityResult)     reviews['Agent 2: Research Quality'] = qualityResult;
+      if (methodologyResult) reviews['Agent 3: Methodology'] = methodologyResult;
+      if (consistencyResult) reviews['Agent 4: Consistency'] = consistencyResult;
+      if (csReviewResult)    reviews['Agent 5: CS Academic'] = csReviewResult;
+      const result = await postJson('/api/review/consolidate', { proposalOutput, reviews });
+      setConsolidationResult(result);
+    } catch (err) {
+      setConsolidationError(err.message || 'Consolidation failed.');
+    } finally {
+      setConsolidationLoading(false);
     }
   }
 
@@ -1129,7 +1152,7 @@ function App() {
           <div className="agent-section">
             <div className="agent-header">
               <div className="agent-title-group">
-                <span className="agent-badge">Agent 5</span>
+                <span className="agent-badge">Agent 4</span>
                 <h2 className="agent-heading">Consistency Reviewer</h2>
               </div>
               <button className="primary" type="button" onClick={handleConsistencyReview} disabled={consistencyLoading}>
@@ -1212,7 +1235,7 @@ function App() {
           <div className="agent-section">
             <div className="agent-header">
               <div className="agent-title-group">
-                <span className="agent-badge">Agent 6</span>
+                <span className="agent-badge">Agent 5</span>
                 <h2 className="agent-heading">CS Academic Reviewer</h2>
               </div>
               <button className="primary" type="button" onClick={handleCsReview} disabled={csReviewLoading}>
@@ -1273,6 +1296,67 @@ function App() {
                     </ol>
                   </div>
                 )}
+              </>
+            )}
+          </div>
+
+          <div className="agent-section consolidation-section">
+            <div className="agent-header">
+              <div className="agent-title-group">
+                <span className="agent-badge agent-badge-final">Final</span>
+                <h2 className="agent-heading">Final Consolidation Agent</h2>
+              </div>
+              <button className="primary" type="button" onClick={handleConsolidation} disabled={consolidationLoading}>
+                {consolidationLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
+                {consolidationLoading ? 'Consolidating…' : 'Run Consolidation'}
+              </button>
+            </div>
+
+            <p className="consolidation-description">
+              Aggregates all review reports, removes duplicate issues, and outputs the top 5 prioritized improvements.
+            </p>
+
+            <button className="agent-prompt-toggle" type="button" onClick={() => setConsolidationPromptOpen((v) => !v)}>
+              <ChevronDown size={14} className={consolidationPromptOpen ? 'agent-chevron-open' : ''} aria-hidden="true" />
+              Prompt
+            </button>
+
+            {consolidationPromptOpen && (
+              <pre className="agent-prompt-box">{`You receive a proposal and review reports from multiple agents.\n\nTask:\n1. Aggregate all issues across all reports\n2. Remove duplicates (same issue from multiple agents = one item)\n3. Rank by impact on proposal quality\n4. Generate exactly 5 top actionable improvements\n\nReturn JSON.`}</pre>
+            )}
+
+            {consolidationError && <p className="error-banner">{consolidationError}</p>}
+
+            {consolidationResult && (
+              <>
+                {consolidationResult.summary && (
+                  <blockquote className="consolidation-summary">{consolidationResult.summary}</blockquote>
+                )}
+
+                <h3 className="consolidation-list-heading">Top 5 Improvements</h3>
+                <div className="consolidation-list">
+                  {(consolidationResult.top_improvements || []).map((item) => (
+                    <div key={item.rank} className={`consolidation-item consolidation-priority-${item.priority}`}>
+                      <div className="consolidation-rank">{item.rank}</div>
+                      <div className="consolidation-body">
+                        <div className="consolidation-item-header">
+                          <span className="consolidation-item-title">{item.title}</span>
+                          <span className={`consolidation-priority-badge cpb-${item.priority}`}>{item.priority}</span>
+                        </div>
+                        {item.description && (
+                          <p className="consolidation-item-desc">{item.description}</p>
+                        )}
+                        {(item.source_agents || []).length > 0 && (
+                          <div className="consolidation-sources">
+                            {item.source_agents.map((src, i) => (
+                              <span key={i} className="consolidation-source-tag">{src}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
           </div>
