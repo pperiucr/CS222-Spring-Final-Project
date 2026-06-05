@@ -22,6 +22,42 @@ const MOCK = {
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  methodology: {
+    checks: [
+      {
+        name: 'Dataset',
+        status: 'warn',
+        weakness: 'Dataset source is mentioned but size, provenance, and preprocessing steps are not described.',
+        recommendation: 'Specify:\n- Dataset name and source (public / synthetic)\n- Number of samples\n- Preprocessing and filtering steps applied'
+      },
+      {
+        name: 'Experimental Design',
+        status: 'warn',
+        weakness: 'The experimental setup lacks detail on train/test splits, cross-validation strategy, and number of independent runs.',
+        recommendation: 'Define:\n- Train/test split ratio (e.g. 80/20)\n- Cross-validation folds (e.g. 5-fold)\n- Number of independent runs for statistical reliability'
+      },
+      {
+        name: 'Evaluation Metrics',
+        status: 'fail',
+        weakness: 'No quantitative evaluation metrics are defined. Success criteria are vague.',
+        recommendation: 'Define primary metrics:\n- Accuracy / F1-score for classification tasks\n- Latency (ms) for response time\n- Mean Time to Resolution (MTTR) reduction %'
+      },
+      {
+        name: 'Baseline Comparisons',
+        status: 'fail',
+        weakness: 'No baseline methods identified.',
+        recommendation: 'Compare against:\n- Rule-based diagnosis\n- Static recovery\n- Existing RL approach'
+      },
+      {
+        name: 'Reproducibility',
+        status: 'warn',
+        weakness: 'Code and data availability are not mentioned. Hyperparameters and environment specifications are absent.',
+        recommendation: 'Commit to:\n- Open-sourcing the implementation\n- Documenting all hyperparameters\n- Providing a reproducibility checklist'
+      }
+    ],
+    critical_issues: 2,
+    overall: 'Major Revisions Required'
+  },
   quality: {
     dimensions: [
       {
@@ -367,6 +403,46 @@ export async function reviewProposal(proposalOutput) {
     };
   }
   return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+const METHODOLOGY_AGENT_SYSTEM_PROMPT = `You are a critical methodology reviewer for research proposals. Apply PhD-level rigor.
+
+Evaluate these five criteria:
+1. Dataset — Is the dataset clearly described with source, size, split strategy, and preprocessing?
+2. Experimental Design — Is the setup rigorous with proper controls, splits, and independent runs?
+3. Evaluation Metrics — Are specific, quantitative success metrics defined?
+4. Baseline Comparisons — Are appropriate baseline methods identified for comparison?
+5. Reproducibility — Is there sufficient detail for independent replication?
+
+For each criterion return:
+- status: "pass" if adequately addressed, "warn" if present but insufficient, "fail" if missing or critically inadequate
+- weakness: specific weakness found (empty string for pass)
+- recommendation: concrete, actionable steps to address it — use bullet points (- item) where helpful (empty string for pass)
+
+Return strict JSON:
+{
+  "checks": [
+    { "name": "Dataset",              "status": "pass|warn|fail", "weakness": "...", "recommendation": "..." },
+    { "name": "Experimental Design",  "status": "pass|warn|fail", "weakness": "...", "recommendation": "..." },
+    { "name": "Evaluation Metrics",   "status": "pass|warn|fail", "weakness": "...", "recommendation": "..." },
+    { "name": "Baseline Comparisons", "status": "pass|warn|fail", "weakness": "...", "recommendation": "..." },
+    { "name": "Reproducibility",      "status": "pass|warn|fail", "weakness": "...", "recommendation": "..." }
+  ],
+  "critical_issues": <count of fail>,
+  "overall": "Pass|Minor Revisions|Major Revisions Required"
+}
+
+Be highly critical. A methodology must be specific enough for independent replication.
+Return only the JSON object.`;
+
+export async function reviewMethodology(proposalOutput) {
+  if (IS_MOCK) return MOCK.methodology;
+  const summary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) return MOCK.methodology;
+  return callGeminiJson(METHODOLOGY_AGENT_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
 }
 
 const QUALITY_AGENT_SYSTEM_PROMPT = `You are a PhD committee member conducting a rigorous review of a research proposal.

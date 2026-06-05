@@ -66,6 +66,10 @@ const TABS = [
 
 const MEMORY_KEY = 'proposal-agent-final-project-memory-v1';
 
+function methOverallKey(verdict) {
+  return (verdict || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g, '');
+}
+
 function scoreColor(score) {
   if (score >= 85) return '#22c55e';
   if (score >= 65) return '#f59e0b';
@@ -265,6 +269,10 @@ function App() {
   const [qualityResult, setQualityResult] = useState(null);
   const [qualityError, setQualityError] = useState('');
   const [qualityPromptOpen, setQualityPromptOpen] = useState(false);
+  const [methodologyLoading, setMethodologyLoading] = useState(false);
+  const [methodologyResult, setMethodologyResult] = useState(null);
+  const [methodologyError, setMethodologyError] = useState('');
+  const [methodologyPromptOpen, setMethodologyPromptOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -308,6 +316,19 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleMethodologyReview() {
+    setMethodologyLoading(true);
+    setMethodologyError('');
+    try {
+      const result = await postJson('/api/review/methodology', { proposalOutput });
+      setMethodologyResult(result);
+    } catch (err) {
+      setMethodologyError(err.message || 'Methodology review failed.');
+    } finally {
+      setMethodologyLoading(false);
     }
   }
 
@@ -985,6 +1006,79 @@ function App() {
                             Suggestion
                           </span>
                           <p className="quality-block-text">{dim.suggestion}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="agent-section">
+            <div className="agent-header">
+              <div className="agent-title-group">
+                <span className="agent-badge">Agent 3</span>
+                <h2 className="agent-heading">Methodology Reviewer</h2>
+                <span className="agent-critical-tag">Critical</span>
+              </div>
+              <button className="primary" type="button" onClick={handleMethodologyReview} disabled={methodologyLoading}>
+                {methodologyLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ListChecks size={16} aria-hidden="true" />}
+                {methodologyLoading ? 'Reviewing…' : 'Run Agent'}
+              </button>
+            </div>
+
+            <button className="agent-prompt-toggle" type="button" onClick={() => setMethodologyPromptOpen((v) => !v)}>
+              <ChevronDown size={14} className={methodologyPromptOpen ? 'agent-chevron-open' : ''} aria-hidden="true" />
+              Prompt
+            </button>
+
+            {methodologyPromptOpen && (
+              <pre className="agent-prompt-box">{`Act as a critical methodology reviewer.\n\nCheck:\n1. Dataset\n2. Experimental Design\n3. Evaluation Metrics\n4. Baseline Comparisons\n5. Reproducibility\n\nFor each weakness provide a concrete recommendation.\n\nReturn JSON.`}</pre>
+            )}
+
+            {methodologyError && <p className="error-banner">{methodologyError}</p>}
+
+            {methodologyResult && (
+              <>
+                <div className="meth-summary-row">
+                  {methodologyResult.critical_issues > 0 && (
+                    <span className="meth-critical-count">
+                      <AlertTriangle size={14} aria-hidden="true" />
+                      {methodologyResult.critical_issues} critical issue{methodologyResult.critical_issues !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {methodologyResult.overall && (
+                    <span className={`meth-overall-badge meth-overall-${methOverallKey(methodologyResult.overall)}`}>
+                      {methodologyResult.overall}
+                    </span>
+                  )}
+                </div>
+
+                <div className="meth-checks">
+                  {(methodologyResult.checks || []).map((check) => (
+                    <div key={check.name} className={`meth-check-card meth-check-${check.status}`}>
+                      <div className="meth-check-header">
+                        {check.status === 'pass'
+                          ? <CheckCircle2 size={16} className="meth-icon-pass" aria-hidden="true" />
+                          : check.status === 'warn'
+                            ? <AlertTriangle size={16} className="meth-icon-warn" aria-hidden="true" />
+                            : <XCircle size={16} className="meth-icon-fail" aria-hidden="true" />}
+                        <span className="meth-check-name">{check.name}</span>
+                        <span className={`meth-status-tag meth-status-${check.status}`}>{check.status}</span>
+                      </div>
+
+                      {check.status !== 'pass' && check.weakness && (
+                        <div className="meth-weakness-block">
+                          <span className="meth-block-label">Weakness</span>
+                          <p className="meth-block-text">{check.weakness}</p>
+                        </div>
+                      )}
+
+                      {check.status !== 'pass' && check.recommendation && (
+                        <div className="meth-recommendation-block">
+                          <span className="meth-block-label">Recommendation</span>
+                          <pre className="meth-rec-text">{check.recommendation}</pre>
                         </div>
                       )}
                     </div>

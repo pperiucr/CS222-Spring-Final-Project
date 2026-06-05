@@ -1656,6 +1656,140 @@ th {
   }
 }
 
+/* Methodology Reviewer (Agent 3) */
+.agent-critical-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid #fecaca;
+}
+
+.meth-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e3eaed;
+}
+
+.meth-critical-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.meth-overall-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
+.meth-overall-pass                   { background: #dcfce7; color: #166534; }
+.meth-overall-minor-revisions        { background: #dbeafe; color: #1e40af; }
+.meth-overall-major-revisions-required { background: #fee2e2; color: #991b1b; }
+
+.meth-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meth-check-card {
+  border-radius: 10px;
+  border: 1px solid #e3eaed;
+  padding: 14px 16px;
+}
+
+.meth-check-pass { background: #f0fdf4; border-color: #bbf7d0; }
+.meth-check-warn { background: #fffbeb; border-color: #fde68a; }
+.meth-check-fail { background: #fff7f7; border-color: #fecaca; }
+
+.meth-check-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.meth-icon-pass { color: #22c55e; flex-shrink: 0; }
+.meth-icon-warn { color: #f59e0b; flex-shrink: 0; }
+.meth-icon-fail { color: #ef4444; flex-shrink: 0; }
+
+.meth-check-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1f2d32;
+  flex: 1;
+}
+
+.meth-status-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+
+.meth-status-pass { background: #dcfce7; color: #166534; }
+.meth-status-warn { background: #fef3c7; color: #92400e; }
+.meth-status-fail { background: #fee2e2; color: #991b1b; }
+
+.meth-weakness-block,
+.meth-recommendation-block {
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.meth-weakness-block {
+  background: #fff1f1;
+  border: 1px solid #fecaca;
+}
+
+.meth-recommendation-block {
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+}
+
+.meth-block-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+
+.meth-weakness-block .meth-block-label      { color: #b91c1c; }
+.meth-recommendation-block .meth-block-label { color: #1d4ed8; }
+
+.meth-block-text {
+  margin: 0;
+  font-size: 0.87rem;
+  line-height: 1.5;
+  color: #2d4a52;
+}
+
+.meth-rec-text {
+  margin: 0;
+  font-size: 0.87rem;
+  line-height: 1.6;
+  color: #1e3a5f;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
 /* Research Quality Reviewer (Agent 2) */
 .quality-verdict-row {
   display: flex;
