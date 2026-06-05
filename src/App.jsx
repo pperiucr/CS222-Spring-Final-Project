@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BotMessageSquare,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Download,
   FileText,
@@ -15,7 +16,8 @@ import {
   Sparkles,
   Trash2,
   Wand2,
-  X
+  X,
+  XCircle
 } from 'lucide-react';
 
 const DEFAULT_REQUIREMENTS = `Proposal must include:
@@ -253,6 +255,10 @@ function App() {
   const [reviewIssuesOpen, setReviewIssuesOpen] = useState(false);
   const [autoFixing, setAutoFixing] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [completenessLoading, setCompletenessLoading] = useState(false);
+  const [completenessResult, setCompletenessResult] = useState(null);
+  const [completenessError, setCompletenessError] = useState('');
+  const [completenessPromptOpen, setCompletenessPromptOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -296,6 +302,19 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleCompletenessReview() {
+    setCompletenessLoading(true);
+    setCompletenessError('');
+    try {
+      const result = await postJson('/api/review/completeness', { proposalOutput });
+      setCompletenessResult(result);
+    } catch (err) {
+      setCompletenessError(err.message || 'Completeness review failed.');
+    } finally {
+      setCompletenessLoading(false);
     }
   }
 
@@ -801,6 +820,90 @@ function App() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+
+          <div className="agent-section">
+            <div className="agent-header">
+              <div className="agent-title-group">
+                <span className="agent-badge">Agent 1</span>
+                <h2 className="agent-heading">Completeness Reviewer</h2>
+              </div>
+              <button className="primary" type="button" onClick={handleCompletenessReview} disabled={completenessLoading}>
+                {completenessLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ClipboardCheck size={16} aria-hidden="true" />}
+                {completenessLoading ? 'Reviewing…' : 'Run Agent'}
+              </button>
+            </div>
+
+            <button className="agent-prompt-toggle" type="button" onClick={() => setCompletenessPromptOpen((v) => !v)}>
+              <ChevronDown size={14} className={completenessPromptOpen ? 'agent-chevron-open' : ''} aria-hidden="true" />
+              Prompt
+            </button>
+
+            {completenessPromptOpen && (
+              <pre className="agent-prompt-box">{`Act as a university proposal reviewer.\n\nIdentify:\n1. Missing sections\n2. Weak sections\n3. Missing details\n\nReturn JSON.`}</pre>
+            )}
+
+            {completenessError && <p className="error-banner">{completenessError}</p>}
+
+            {completenessResult && (
+              <div className="agent-results-grid">
+                <div className="agent-checks-panel">
+                  <h3 className="agent-panel-heading">Checks</h3>
+                  <ul className="agent-checks-list">
+                    {(completenessResult.sections || []).map((s) => (
+                      <li key={s.name} className={`agent-check-item ${s.present ? 'agent-check-present' : 'agent-check-missing'}`}>
+                        {s.present
+                          ? <CheckCircle2 size={15} aria-hidden="true" />
+                          : <XCircle size={15} aria-hidden="true" />}
+                        <span className="agent-check-name">{s.name}</span>
+                        {s.present && s.quality !== 'strong' && (
+                          <span className={`agent-quality-tag agent-quality-${s.quality}`}>{s.quality}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="agent-findings-panel">
+                  {(completenessResult.missing || []).length > 0 && (
+                    <>
+                      <h3 className="agent-panel-heading">Missing</h3>
+                      <ul className="agent-findings-list">
+                        {completenessResult.missing.map((item, i) => (
+                          <li key={i} className="agent-finding-missing">— {item}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {(completenessResult.weak || []).length > 0 && (
+                    <>
+                      <h3 className="agent-panel-heading" style={{ marginTop: '14px' }}>Weak</h3>
+                      <ul className="agent-findings-list">
+                        {completenessResult.weak.map((item, i) => (
+                          <li key={i} className="agent-finding-weak">— {item}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {(completenessResult.details_missing || []).length > 0 && (
+                    <>
+                      <h3 className="agent-panel-heading" style={{ marginTop: '14px' }}>Missing Details</h3>
+                      <ul className="agent-findings-list">
+                        {completenessResult.details_missing.map((item, i) => (
+                          <li key={i} className="agent-finding-detail">— {item}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {!(completenessResult.missing?.length) && !(completenessResult.weak?.length) && (
+                    <p className="agent-all-good">All sections present and strong!</p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

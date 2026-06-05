@@ -22,6 +22,21 @@ const MOCK = {
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  completeness: {
+    sections: [
+      { name: 'Problem Statement',  present: true,  quality: 'strong'   },
+      { name: 'Literature Review',  present: true,  quality: 'adequate' },
+      { name: 'Methodology',        present: true,  quality: 'adequate' },
+      { name: 'Research Questions', present: true,  quality: 'strong'   },
+      { name: 'Timeline',           present: true,  quality: 'strong'   },
+      { name: 'References',         present: true,  quality: 'adequate' },
+      { name: 'Research Gap',       present: false, quality: 'missing'  },
+      { name: 'Evaluation Metrics', present: false, quality: 'missing'  }
+    ],
+    missing: ['Research Gap', 'Evaluation Metrics'],
+    weak: ['Literature Review lacks recent citations (post-2022)', 'Methodology missing quantitative evaluation detail'],
+    details_missing: ['Quantitative success criteria', 'Baseline comparison methods', 'Dataset description and size']
+  },
   review: {
     overallScore: 82,
     dimensions: {
@@ -323,6 +338,49 @@ export async function reviewProposal(proposalOutput) {
     };
   }
   return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+const COMPLETENESS_AGENT_SYSTEM_PROMPT = `Act as a university research proposal reviewer. Analyze the provided proposal content and evaluate these 8 sections:
+1. Problem Statement — is there a clear, specific problem being addressed?
+2. Literature Review — are relevant prior works cited and discussed?
+3. Methodology — is there a clear research approach with methods described?
+4. Research Questions — are there specific, measurable research questions or hypotheses?
+5. Timeline — is there a project timeline with phases or milestones?
+6. References — are there properly formatted citations?
+7. Research Gap — is the gap in existing knowledge explicitly stated?
+8. Evaluation Metrics — are there quantitative metrics for measuring success?
+
+Identify: 1. Missing sections 2. Weak sections 3. Missing details
+
+Return strict JSON in exactly this shape:
+{
+  "sections": [
+    { "name": "Problem Statement",  "present": true,  "quality": "strong"   },
+    { "name": "Literature Review",  "present": true,  "quality": "adequate" },
+    { "name": "Methodology",        "present": true,  "quality": "adequate" },
+    { "name": "Research Questions", "present": true,  "quality": "strong"   },
+    { "name": "Timeline",           "present": true,  "quality": "strong"   },
+    { "name": "References",         "present": true,  "quality": "adequate" },
+    { "name": "Research Gap",       "present": false, "quality": "missing"  },
+    { "name": "Evaluation Metrics", "present": false, "quality": "missing"  }
+  ],
+  "missing": ["section names that are absent"],
+  "weak": ["description of each weak section"],
+  "details_missing": ["specific missing detail"]
+}
+
+quality values: "strong" = well-developed, "adequate" = present but improvable, "weak" = present but insufficient, "missing" = not found.
+Do not mark a section present unless the proposal meaningfully addresses that topic.
+Return only the JSON object.`;
+
+export async function reviewCompleteness(proposalOutput) {
+  if (IS_MOCK) return MOCK.completeness;
+  const summary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) return MOCK.completeness;
+  return callGeminiJson(COMPLETENESS_AGENT_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
 }
 
 export async function autoFixField(field, content, issue) {
