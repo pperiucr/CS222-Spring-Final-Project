@@ -70,6 +70,10 @@ function methOverallKey(verdict) {
   return (verdict || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g, '');
 }
 
+function consistencyOverallKey(verdict) {
+  return (verdict || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g, '');
+}
+
 function scoreColor(score) {
   if (score >= 85) return '#22c55e';
   if (score >= 65) return '#f59e0b';
@@ -273,6 +277,10 @@ function App() {
   const [methodologyResult, setMethodologyResult] = useState(null);
   const [methodologyError, setMethodologyError] = useState('');
   const [methodologyPromptOpen, setMethodologyPromptOpen] = useState(false);
+  const [consistencyLoading, setConsistencyLoading] = useState(false);
+  const [consistencyResult, setConsistencyResult] = useState(null);
+  const [consistencyError, setConsistencyError] = useState('');
+  const [consistencyPromptOpen, setConsistencyPromptOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -316,6 +324,19 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleConsistencyReview() {
+    setConsistencyLoading(true);
+    setConsistencyError('');
+    try {
+      const result = await postJson('/api/review/consistency', { proposalOutput });
+      setConsistencyResult(result);
+    } catch (err) {
+      setConsistencyError(err.message || 'Consistency review failed.');
+    } finally {
+      setConsistencyLoading(false);
     }
   }
 
@@ -1084,6 +1105,89 @@ function App() {
                     </div>
                   ))}
                 </div>
+              </>
+            )}
+          </div>
+
+          <div className="agent-section">
+            <div className="agent-header">
+              <div className="agent-title-group">
+                <span className="agent-badge">Agent 5</span>
+                <h2 className="agent-heading">Consistency Reviewer</h2>
+              </div>
+              <button className="primary" type="button" onClick={handleConsistencyReview} disabled={consistencyLoading}>
+                {consistencyLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <RefreshCw size={16} aria-hidden="true" />}
+                {consistencyLoading ? 'Reviewing…' : 'Run Agent'}
+              </button>
+            </div>
+
+            <button className="agent-prompt-toggle" type="button" onClick={() => setConsistencyPromptOpen((v) => !v)}>
+              <ChevronDown size={14} className={consistencyPromptOpen ? 'agent-chevron-open' : ''} aria-hidden="true" />
+              Prompt
+            </button>
+
+            {consistencyPromptOpen && (
+              <pre className="agent-prompt-box">{`Check cross-section alignment.\n\nDetect inconsistencies between:\n- Research questions ↔ Evaluation metrics\n- Methodology ↔ Timeline\n- Title ↔ Contributions\n- Objectives ↔ Research questions\n\nFor each inconsistency: show which sections conflict and why.\n\nReturn JSON.`}</pre>
+            )}
+
+            {consistencyError && <p className="error-banner">{consistencyError}</p>}
+
+            {consistencyResult && (
+              <>
+                <div className="meth-summary-row">
+                  {(consistencyResult.inconsistencies || []).filter((i) => i.severity === 'high').length > 0 && (
+                    <span className="meth-critical-count">
+                      <AlertTriangle size={14} aria-hidden="true" />
+                      {consistencyResult.inconsistencies.filter((i) => i.severity === 'high').length} high severity
+                    </span>
+                  )}
+                  {consistencyResult.overall && (
+                    <span className={`meth-overall-badge consistency-overall-${consistencyOverallKey(consistencyResult.overall)}`}>
+                      {consistencyResult.overall}
+                    </span>
+                  )}
+                </div>
+
+                {(consistencyResult.inconsistencies || []).length === 0 ? (
+                  <p className="agent-all-good">No inconsistencies detected — all sections are aligned!</p>
+                ) : (
+                  <div className="consistency-cards">
+                    {consistencyResult.inconsistencies.map((item, i) => (
+                      <div key={i} className={`consistency-card consistency-severity-${item.severity}`}>
+                        <div className="consistency-comparison">
+                          <div className="consistency-side">
+                            <span className="consistency-section-name">{item.section_a}</span>
+                            <p className="consistency-section-value">{item.value_a}</p>
+                          </div>
+                          <div className="consistency-vs" aria-hidden="true">vs</div>
+                          <div className="consistency-side">
+                            <span className="consistency-section-name">{item.section_b}</span>
+                            <p className="consistency-section-value">{item.value_b}</p>
+                          </div>
+                        </div>
+                        <div className="consistency-footer">
+                          <span className={`consistency-detected-label consistency-detected-${item.severity}`}>
+                            <AlertTriangle size={13} aria-hidden="true" />
+                            Inconsistency detected
+                            <span className={`consistency-severity-badge consistency-sev-${item.severity}`}>{item.severity}</span>
+                          </span>
+                          {item.description && (
+                            <p className="consistency-description">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(consistencyResult.consistent_pairs || []).length > 0 && (
+                  <div className="consistency-pairs-row">
+                    <span className="consistency-pairs-label">Consistent:</span>
+                    {consistencyResult.consistent_pairs.map((pair, i) => (
+                      <span key={i} className="consistency-pair-tag">{pair}</span>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>

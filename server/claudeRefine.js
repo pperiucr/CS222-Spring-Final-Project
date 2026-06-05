@@ -22,6 +22,36 @@ const MOCK = {
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  consistency: {
+    inconsistencies: [
+      {
+        section_a: 'Research Question',
+        value_a: 'Reduce packet loss',
+        section_b: 'Methodology',
+        value_b: 'Measures latency only',
+        description: 'The research question targets packet loss reduction but the evaluation plan measures only latency. No packet loss metric is defined anywhere in the methodology.',
+        severity: 'high'
+      },
+      {
+        section_a: 'Timeline',
+        value_a: 'Timeline says 12 months',
+        section_b: 'Methodology',
+        value_b: 'Methodology implies 24 months of experiments',
+        description: 'Dataset collection, three fine-tuning rounds, and multi-topology simulation described in the methodology cannot realistically be completed in 12 months. Scope must be reduced or timeline extended.',
+        severity: 'high'
+      },
+      {
+        section_a: 'Title',
+        value_a: 'NLP-Driven Network Operations Agent',
+        section_b: 'Contributions',
+        value_b: 'Contributions focus solely on fault detection',
+        description: 'The title implies broad network operations coverage but the stated contributions are scoped only to fault detection and recovery. Other operations aspects are not addressed.',
+        severity: 'medium'
+      }
+    ],
+    consistent_pairs: ['Hypothesis ↔ Problem Statement', 'References ↔ Research Area'],
+    overall: 'Inconsistencies Found'
+  },
   methodology: {
     checks: [
       {
@@ -403,6 +433,51 @@ export async function reviewProposal(proposalOutput) {
     };
   }
   return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+const CONSISTENCY_AGENT_SYSTEM_PROMPT = `You are a consistency reviewer for research proposals. Your job is to detect cross-section alignment issues that could undermine the proposal's credibility.
+
+Examine these critical cross-section pairs:
+1. Research Questions / Hypotheses ↔ Evaluation Metrics — do the metrics actually measure what the questions ask?
+2. Methodology ↔ Timeline — is the timeline realistic given the methodology scope?
+3. Title ↔ Problem Statement ↔ Contributions — do they all describe the same research focus?
+4. Objectives ↔ Research Questions — are they aligned and non-contradictory?
+5. Budget ↔ Methodology — does the budget support the proposed work?
+6. Contributions ↔ Research Questions — does each contribution address a stated question?
+
+For each inconsistency found:
+- section_a / value_a: first section and the specific claim
+- section_b / value_b: second section and the conflicting claim
+- description: 1–2 sentences explaining why this is an inconsistency and what it means for the proposal
+- severity: "high" (blocks the proposal), "medium" (needs addressing), "low" (minor)
+
+Return strict JSON:
+{
+  "inconsistencies": [
+    {
+      "section_a": "...",
+      "value_a": "brief excerpt of the specific claim",
+      "section_b": "...",
+      "value_b": "brief excerpt of the conflicting claim",
+      "description": "...",
+      "severity": "high|medium|low"
+    }
+  ],
+  "consistent_pairs": ["Section A ↔ Section B"],
+  "overall": "Inconsistencies Found|Mostly Consistent|Fully Consistent"
+}
+
+Be specific — reference the actual text. If no inconsistencies exist, return an empty array and "Fully Consistent".
+Return only the JSON object.`;
+
+export async function reviewConsistency(proposalOutput) {
+  if (IS_MOCK) return MOCK.consistency;
+  const summary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) return MOCK.consistency;
+  return callGeminiJson(CONSISTENCY_AGENT_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
 }
 
 const METHODOLOGY_AGENT_SYSTEM_PROMPT = `You are a critical methodology reviewer for research proposals. Apply PhD-level rigor.

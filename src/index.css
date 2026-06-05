@@ -1656,6 +1656,144 @@ th {
   }
 }
 
+/* Consistency Reviewer (Agent 5) */
+.consistency-overall-inconsistencies-found { background: #fee2e2; color: #991b1b; }
+.consistency-overall-mostly-consistent     { background: #fef3c7; color: #92400e; }
+.consistency-overall-fully-consistent      { background: #dcfce7; color: #166534; }
+
+.consistency-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.consistency-card {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e3eaed;
+}
+
+.consistency-severity-high   { border-color: #fca5a5; }
+.consistency-severity-medium { border-color: #fde68a; }
+.consistency-severity-low    { border-color: #bfdbfe; }
+
+.consistency-comparison {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  background: #fafcfd;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.consistency-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.consistency-section-name {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6b8e9b;
+}
+
+.consistency-section-value {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2d32;
+  line-height: 1.4;
+}
+
+.consistency-vs {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #9ab0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-top: 2px;
+  align-self: center;
+}
+
+.consistency-footer {
+  padding: 10px 16px 12px;
+  border-top: 1px solid #e3eaed;
+  background: #ffffff;
+}
+
+.consistency-detected-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.consistency-detected-high   { color: #b91c1c; }
+.consistency-detected-medium { color: #92400e; }
+.consistency-detected-low    { color: #1d4ed8; }
+
+.consistency-severity-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 7px;
+  border-radius: 20px;
+  margin-left: 2px;
+}
+
+.consistency-sev-high   { background: #fee2e2; color: #991b1b; }
+.consistency-sev-medium { background: #fef3c7; color: #92400e; }
+.consistency-sev-low    { background: #dbeafe; color: #1e40af; }
+
+.consistency-description {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #3d5c65;
+  line-height: 1.5;
+}
+
+.consistency-pairs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e3eaed;
+}
+
+.consistency-pairs-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6b8e9b;
+  white-space: nowrap;
+}
+
+.consistency-pair-tag {
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+
+@media (max-width: 700px) {
+  .consistency-comparison {
+    grid-template-columns: 1fr;
+  }
+  .consistency-vs {
+    text-align: center;
+  }
+}
+
 /* Methodology Reviewer (Agent 3) */
 .agent-critical-tag {
   font-size: 0.68rem;
