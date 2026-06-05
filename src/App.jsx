@@ -2383,7 +2383,7 @@ const EMPTY_RISK = { id: 0, category: 'Technical', description: '', likelihood: 
 
 function RisksModal({ onSave, onClose, initialSavedRisks }) {
   const [savedRisks, setSavedRisks] = useState(initialSavedRisks || []);
-  const [form, setForm] = useState({ ...EMPTY_RISK, id: 1 });
+  const [form, setForm] = useState({ ...EMPTY_RISK, id: Date.now() });
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
