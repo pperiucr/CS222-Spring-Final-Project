@@ -208,12 +208,47 @@ const MOCK = {
       { field: 'risks_mitigation', severity: 'low', message: 'Mitigation strategies lack specificity. Add concrete fallback plans for each risk.' }
     ]
   },
-  corrections: {
+  correctionsCompleteness: {
     corrections: {
-      problem_statement: 'Modern network operations centers face a critical scalability challenge: the volume and complexity of network events has outpaced human cognitive capacity for real-time response. Existing rule-based automation systems are brittle and cannot interpret the nuanced, context-dependent intent expressed by network engineers in natural language. This research proposes an NLP-driven agent framework that bridges the gap between natural language operational commands and automated network control actions, specifically targeting a 30% reduction in mean-time-to-resolution across heterogeneous enterprise network environments.',
-      methodology_text: 'This study employs a four-phase experimental design: (1) corpus construction from 500+ annotated NOC transcripts and synthetic examples with preprocessing and quality filtering; (2) transformer model fine-tuning augmented with retrieval-augmented generation (RAG) for real-time topology context injection; (3) controlled evaluation against three baselines — rule-based diagnosis, static recovery, and an RL-based SDN approach — using Precision, Recall, F1-score, and MTTR reduction as primary metrics; (4) reproducibility validation via 5-fold cross-validation across GNS3 simulated enterprise topologies. All code, datasets, and model checkpoints will be publicly released.'
+      objective: 'This research aims to design, implement, and evaluate an NLP-driven agent framework for automating network operations tasks. Specific objectives are: (1) build an annotated NOC transcript corpus; (2) fine-tune a transformer model with RAG-based topology context; (3) evaluate against rule-based and RL baselines; (4) achieve a 30% reduction in mean-time-to-resolution in simulated enterprise environments.',
+      hypothesis: 'H1: An NLP agent fine-tuned on annotated NOC logs will achieve ≥85% command-to-action accuracy versus a zero-shot baseline. H2: Integrating RAG with live topology context will reduce configuration-command hallucination rate by ≥40%. H3: The proposed agent will reduce average incident response time by ≥30% compared to manual operator workflows in GNS3 simulated scenarios.'
     },
-    explanation: 'Strengthened problem statement with quantitative scope and explicit target metric. Revised methodology to include explicit baselines, evaluation metrics, dataset size, and a public reproducibility commitment.'
+    explanation: 'Completeness review found the Objective lacked specific measurable goals and the Hypotheses lacked quantitative thresholds. Both sections have been expanded with concrete targets and numbered sub-objectives.'
+  },
+  correctionsQuality: {
+    corrections: {
+      problem_statement: 'Network operations centers process thousands of alerts daily, yet 78% of resolution time is consumed by manual diagnosis — a gap that existing automation cannot close because rule-based systems cannot interpret context-dependent natural language intent. Prior work (Yu et al. 2019; Wang et al. 2021) addresses fault detection but not end-to-end natural language command execution. This research fills that gap by proposing an NLP agent that translates free-form operational commands directly into verified network control actions, representing a novel contribution at the intersection of NLP and network automation.',
+      contributions: '1. A publicly released corpus of 500+ annotated NOC transcripts for NLP-based network automation research.\n2. A novel RAG-augmented transformer agent that achieves state-of-the-art command-to-action accuracy on heterogeneous network topologies.\n3. An open-source evaluation framework with three baselines (rule-based, static recovery, RL-SDN) and standardised metrics (Precision, Recall, F1, MTTR reduction).\n4. Empirical evidence that NLP-driven automation reduces incident response time by ≥30% in realistic enterprise simulations.'
+    },
+    explanation: 'Research Quality review found no explicit research gap citation and contributions overlapped with prior work. Problem statement now cites specific gaps in the literature; contributions list is rewritten to be concrete, novel, and distinct from existing approaches.'
+  },
+  correctionsMethodology: {
+    corrections: {
+      methodology_text: 'This study employs a four-phase experimental design to ensure rigorous evaluation and reproducibility. Phase 1 (Corpus Construction): collect and annotate 500+ NOC transcripts from public logs and synthetic generation, applying quality filtering and 80/20 train/test split. Phase 2 (Model Development): fine-tune a transformer model augmented with retrieval-augmented generation (RAG) for topology context; hyperparameter search via 5-fold cross-validation across 3 independent runs. Phase 3 (Controlled Evaluation): compare against three baselines — rule-based diagnosis, static recovery, and an RL-based SDN controller — using Precision, Recall, F1-score, MTTR reduction (%), and Network Availability as primary metrics; statistical significance tested with Wilcoxon signed-rank test (α=0.05). Phase 4 (Reproducibility): all code, datasets, model checkpoints, and GNS3 topology configs will be publicly released under MIT licence.'
+    },
+    explanation: 'Methodology review identified missing evaluation metrics, no defined train/test split, no baseline comparisons, and no reproducibility commitment. All four gaps are now explicitly addressed.'
+  },
+  correctionsConsistency: {
+    corrections: {
+      objective: 'This research aims to design and evaluate an NLP-driven agent for network operations automation, with the following objectives: (1) construct an annotated NOC corpus; (2) develop a RAG-augmented transformer agent; (3) measure command-to-action accuracy, MTTR reduction, and Network Availability against three baselines over a 24-week timeline; (4) publicly release all artefacts.',
+      timeline: 'Week 1–4: Literature review and dataset collection (500+ NOC transcripts). Week 5–8: Data annotation, preprocessing, and 80/20 corpus split. Week 9–12: Model design, RAG integration, and initial fine-tuning. Week 13–16: Baseline implementation (rule-based, static recovery, RL-SDN). Week 17–20: Controlled evaluation and statistical analysis. Week 21–22: Reproducibility packaging (code, data, configs). Week 23–24: Proposal writing, revision, and submission.'
+    },
+    explanation: 'Consistency review found the Objective referenced a 12-week plan while the Timeline listed 24 weeks, and evaluation metrics in Objectives did not match the metrics described in the Methodology. Both sections are now aligned on a 24-week schedule with matching metrics.'
+  },
+  correctionsCs: {
+    corrections: {
+      problem_statement: 'Network operations automation is an open problem in systems research: existing approaches rely on rigid rule sets that cannot generalise across heterogeneous topologies or interpret the ambiguous, context-rich language used by network engineers. This research addresses the technical gap in NLP-to-network-control translation by designing an agent that grounds natural language commands in live topology state via retrieval-augmented generation, then executes verified configuration actions. The agent is evaluated on intent accuracy, execution correctness, and latency metrics — standard CS evaluation criteria for autonomous decision-making systems.',
+      hypothesis: 'H1: A RAG-augmented NLP agent trained on domain-specific NOC transcripts will outperform a zero-shot GPT-4 baseline by ≥15 percentage points in command-to-action accuracy (F1). H2: Topology-grounded generation will reduce hallucinated configuration commands by ≥40% versus generation without retrieval context. H3: End-to-end MTTR in GNS3 simulations will decrease by ≥30% relative to manual operator workflows, measured over 100 incident scenarios.'
+    },
+    explanation: 'CS Academic review found the problem statement lacked technical precision and did not situate the work within CS research standards. Hypotheses lacked quantitative baselines and comparison anchors. Both sections have been revised to use formal CS evaluation language and explicit numerical targets.'
+  },
+  correctionsConsolidation: {
+    corrections: {
+      problem_statement: 'Network operations centers process thousands of alerts daily, yet incident resolution remains largely manual — a bottleneck rooted in the inability of existing automation to interpret context-dependent natural language intent. Prior work addresses fault detection (Yu et al. 2019) and static recovery (Wang et al. 2021) but no prior system translates free-form NLC commands into verified, topology-aware network control actions. This research closes that gap with an NLP-driven agent that achieves ≥85% command-to-action accuracy and ≥30% MTTR reduction in heterogeneous simulated environments.',
+      methodology_text: 'Phase 1: Corpus — 500+ annotated NOC transcripts, 80/20 split, 5-fold CV. Phase 2: Model — transformer + RAG topology context, hyperparameter search, 3 independent runs. Phase 3: Evaluation — vs. rule-based, static-recovery, and RL-SDN baselines; metrics: Precision, Recall, F1, MTTR reduction, Network Availability; Wilcoxon signed-rank significance test (α=0.05). Phase 4: Reproducibility — code, datasets, model checkpoints, and GNS3 configs released under MIT licence.',
+      contributions: '1. First publicly released annotated NOC transcript corpus (500+ entries) for NLP-based network automation.\n2. RAG-augmented transformer agent achieving state-of-the-art command-to-action F1 on heterogeneous topologies.\n3. Open-source evaluation benchmark with three baselines and standardised metrics.\n4. Empirical evidence of ≥30% MTTR reduction in realistic GNS3 enterprise simulations.'
+    },
+    explanation: 'Consolidation of all agent reports: added explicit research gap with citations (Completeness + Quality), strengthened evaluation metrics and baseline list (Methodology), and rewrote contributions to be novel and distinct (Quality + CS Academic).'
   }
 };
 
@@ -784,12 +819,13 @@ export async function autoFixField(field, content, issue) {
   return String(parsed.improved || content).trim();
 }
 
-const CORRECTION_SYSTEM_PROMPT = `You are a research proposal editor. You receive a research proposal and a review report from one of the review agents. Your task is to revise the relevant sections of the proposal to address the issues raised.
+const CORRECTION_SYSTEM_PROMPT = `You are a research proposal editor. You receive a research proposal and a structured review report from ONE specific review agent. Your task is to revise ONLY the proposal fields that the review report explicitly identifies as problematic.
 
 Rules:
-- Only revise fields that the review feedback explicitly targets.
-- Preserve content in fields not mentioned in the feedback.
+- Read the review report carefully. Identify which sections it criticises or flags.
+- Only revise fields directly addressed by that agent's findings. Do NOT touch fields the agent did not mention.
 - Each revised field must be a complete, self-contained replacement — not a partial edit.
+- Incorporate the agent's specific suggestions, recommendations, and required additions.
 - Academic tone, clear and concise.
 - Valid field names: research_title, objective, problem_statement, hypothesis, motivation, methodology_text, tools, contributions, timeline, risks, references
 
@@ -798,11 +834,20 @@ Return strict JSON:
   "corrections": {
     "<field_name>": "<full revised text>"
   },
-  "explanation": "<1-2 sentences summarising what was changed and why>"
+  "explanation": "<1-2 sentences summarising which agent's issues were addressed and what changed>"
 }`;
 
+const MOCK_CORRECTIONS_BY_AGENT = {
+  'Agent 1: Completeness':    MOCK.correctionsCompleteness,
+  'Agent 2: Research Quality': MOCK.correctionsQuality,
+  'Agent 3: Methodology':     MOCK.correctionsMethodology,
+  'Agent 4: Consistency':     MOCK.correctionsConsistency,
+  'Agent 5: CS Academic':     MOCK.correctionsCs,
+  'Final Consolidation':      MOCK.correctionsConsolidation,
+};
+
 export async function correctFromReview(proposalOutput, agentName, feedback) {
-  if (IS_MOCK) return MOCK.corrections;
+  if (IS_MOCK) return MOCK_CORRECTIONS_BY_AGENT[agentName] ?? MOCK.correctionsConsolidation;
   const summary = Object.entries(proposalOutput || {})
     .filter(([, v]) => v && typeof v === 'string' && v.trim())
     .map(([k, v]) => `[${k}]\n${v}`)
