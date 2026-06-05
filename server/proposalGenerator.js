@@ -1275,8 +1275,8 @@ ${problemStatement ? latexParagraph(problemStatement) : ''}
 ${motivation ? `\n\\medskip\n${latexParagraph(motivation)}` : ''}
 ` : ''}
 ${hypothesis ? `
-\\section{Research Question and Hypothesis}
-${buildNumberedListLatex(hypothesis)}
+\\section{Hypothesis}
+${toItemize(hypothesis.replace(/\bH\d+[:.]?\s*/g, ''))}
 ` : ''}
 ${(methodology || tools) ? `
 \\section{Methodology}
