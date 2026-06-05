@@ -207,6 +207,13 @@ const MOCK = {
       { field: 'contributions', severity: 'medium', message: 'Contributions overlap with existing work — clarify the novel aspect more explicitly.' },
       { field: 'risks_mitigation', severity: 'low', message: 'Mitigation strategies lack specificity. Add concrete fallback plans for each risk.' }
     ]
+  },
+  corrections: {
+    corrections: {
+      problem_statement: 'Modern network operations centers face a critical scalability challenge: the volume and complexity of network events has outpaced human cognitive capacity for real-time response. Existing rule-based automation systems are brittle and cannot interpret the nuanced, context-dependent intent expressed by network engineers in natural language. This research proposes an NLP-driven agent framework that bridges the gap between natural language operational commands and automated network control actions, specifically targeting a 30% reduction in mean-time-to-resolution across heterogeneous enterprise network environments.',
+      methodology_text: 'This study employs a four-phase experimental design: (1) corpus construction from 500+ annotated NOC transcripts and synthetic examples with preprocessing and quality filtering; (2) transformer model fine-tuning augmented with retrieval-augmented generation (RAG) for real-time topology context injection; (3) controlled evaluation against three baselines — rule-based diagnosis, static recovery, and an RL-based SDN approach — using Precision, Recall, F1-score, and MTTR reduction as primary metrics; (4) reproducibility validation via 5-fold cross-validation across GNS3 simulated enterprise topologies. All code, datasets, and model checkpoints will be publicly released.'
+    },
+    explanation: 'Strengthened problem statement with quantitative scope and explicit target metric. Revised methodology to include explicit baselines, evaluation metrics, dataset size, and a public reproducibility commitment.'
   }
 };
 
@@ -775,4 +782,35 @@ export async function autoFixField(field, content, issue) {
     `Field: ${field}\nCurrent content:\n${content}\n\nIssue to fix: ${issue}`
   );
   return String(parsed.improved || content).trim();
+}
+
+const CORRECTION_SYSTEM_PROMPT = `You are a research proposal editor. You receive a research proposal and a review report from one of the review agents. Your task is to revise the relevant sections of the proposal to address the issues raised.
+
+Rules:
+- Only revise fields that the review feedback explicitly targets.
+- Preserve content in fields not mentioned in the feedback.
+- Each revised field must be a complete, self-contained replacement — not a partial edit.
+- Academic tone, clear and concise.
+- Valid field names: research_title, objective, problem_statement, hypothesis, motivation, methodology_text, tools, contributions, timeline, risks, references
+
+Return strict JSON:
+{
+  "corrections": {
+    "<field_name>": "<full revised text>"
+  },
+  "explanation": "<1-2 sentences summarising what was changed and why>"
+}`;
+
+export async function correctFromReview(proposalOutput, agentName, feedback) {
+  if (IS_MOCK) return MOCK.corrections;
+  const summary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) return MOCK.corrections;
+  const feedbackText = JSON.stringify(feedback, null, 2);
+  return callGeminiJson(
+    CORRECTION_SYSTEM_PROMPT,
+    `Review agent: ${agentName}\n\nReview feedback:\n${feedbackText}\n\nCurrent proposal:\n${summary}`
+  );
 }

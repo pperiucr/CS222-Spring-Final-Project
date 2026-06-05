@@ -74,6 +74,20 @@ function consistencyOverallKey(verdict) {
   return (verdict || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g, '');
 }
 
+const PROPOSAL_FIELD_LABELS = {
+  research_title: 'Research Title',
+  objective: 'Objective',
+  problem_statement: 'Problem Statement',
+  hypothesis: 'Hypothesis',
+  motivation: 'Motivation',
+  methodology_text: 'Methodology',
+  tools: 'Tools',
+  contributions: 'Expected Contributions',
+  timeline: 'Timeline',
+  risks: 'Risks & Mitigation',
+  references: 'References',
+};
+
 function scoreColor(score) {
   if (score >= 85) return '#22c55e';
   if (score >= 65) return '#f59e0b';
@@ -289,6 +303,18 @@ function App() {
   const [consolidationResult, setConsolidationResult] = useState(null);
   const [consolidationError, setConsolidationError] = useState('');
   const [consolidationPromptOpen, setConsolidationPromptOpen] = useState(false);
+  const [completenessCorrecting, setCompletenessCorrecting] = useState(false);
+  const [completenessCorrections, setCompletenessCorrections] = useState(null);
+  const [qualityCorrecting, setQualityCorrecting] = useState(false);
+  const [qualityCorrections, setQualityCorrections] = useState(null);
+  const [methodologyCorrecting, setMethodologyCorrecting] = useState(false);
+  const [methodologyCorrections, setMethodologyCorrections] = useState(null);
+  const [consistencyCorrecting, setConsistencyCorrecting] = useState(false);
+  const [consistencyCorrections, setConsistencyCorrections] = useState(null);
+  const [csReviewCorrecting, setCsReviewCorrecting] = useState(false);
+  const [csReviewCorrections, setCsReviewCorrections] = useState(null);
+  const [consolidationCorrecting, setConsolidationCorrecting] = useState(false);
+  const [consolidationCorrections, setConsolidationCorrections] = useState(null);
   const [exportLatexLoading, setExportLatexLoading] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
@@ -314,6 +340,26 @@ function App() {
     setReviewError('');
     setReviewResult(computeReviewScores(proposalOutput));
     setReviewIssuesOpen(false);
+  }
+
+  async function handleCorrectFromReview(agentName, reviewResult, setCorrecting, setCorrections, setError) {
+    setCorrecting(true);
+    setCorrections(null);
+    setError('');
+    try {
+      const data = await postJson('/api/review/correct', { proposalOutput, agentName, feedback: reviewResult });
+      setCorrections(data.corrections && Object.keys(data.corrections).length > 0 ? data : null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCorrecting(false);
+    }
+  }
+
+  function acceptCorrections(corrections, setCorrections) {
+    if (!corrections?.corrections) return;
+    updateOutput(corrections.corrections);
+    setCorrections(null);
   }
 
   async function handleAutoFix() {
@@ -1071,6 +1117,16 @@ function App() {
                 </div>
               </div>
             )}
+            <CorrectionPanel
+              result={completenessResult}
+              correcting={completenessCorrecting}
+              corrections={completenessCorrections}
+              error={completenessError}
+              setError={setCompletenessError}
+              onCorrect={() => handleCorrectFromReview('Agent 1: Completeness', completenessResult, setCompletenessCorrecting, setCompletenessCorrections, setCompletenessError)}
+              onAccept={() => acceptCorrections(completenessCorrections, setCompletenessCorrections)}
+              onDiscard={() => setCompletenessCorrections(null)}
+            />
           </div>
 
           <div className="agent-section">
@@ -1139,6 +1195,16 @@ function App() {
                 </div>
               </>
             )}
+            <CorrectionPanel
+              result={qualityResult}
+              correcting={qualityCorrecting}
+              corrections={qualityCorrections}
+              error={qualityError}
+              setError={setQualityError}
+              onCorrect={() => handleCorrectFromReview('Agent 2: Research Quality', qualityResult, setQualityCorrecting, setQualityCorrections, setQualityError)}
+              onAccept={() => acceptCorrections(qualityCorrections, setQualityCorrections)}
+              onDiscard={() => setQualityCorrections(null)}
+            />
           </div>
 
           <div className="agent-section">
@@ -1212,6 +1278,16 @@ function App() {
                 </div>
               </>
             )}
+            <CorrectionPanel
+              result={methodologyResult}
+              correcting={methodologyCorrecting}
+              corrections={methodologyCorrections}
+              error={methodologyError}
+              setError={setMethodologyError}
+              onCorrect={() => handleCorrectFromReview('Agent 3: Methodology', methodologyResult, setMethodologyCorrecting, setMethodologyCorrections, setMethodologyError)}
+              onAccept={() => acceptCorrections(methodologyCorrections, setMethodologyCorrections)}
+              onDiscard={() => setMethodologyCorrections(null)}
+            />
           </div>
 
           <div className="agent-section">
@@ -1295,6 +1371,16 @@ function App() {
                 )}
               </>
             )}
+            <CorrectionPanel
+              result={consistencyResult}
+              correcting={consistencyCorrecting}
+              corrections={consistencyCorrections}
+              error={consistencyError}
+              setError={setConsistencyError}
+              onCorrect={() => handleCorrectFromReview('Agent 4: Consistency', consistencyResult, setConsistencyCorrecting, setConsistencyCorrections, setConsistencyError)}
+              onAccept={() => acceptCorrections(consistencyCorrections, setConsistencyCorrections)}
+              onDiscard={() => setConsistencyCorrections(null)}
+            />
           </div>
 
           <div className="agent-section">
@@ -1363,6 +1449,16 @@ function App() {
                 )}
               </>
             )}
+            <CorrectionPanel
+              result={csReviewResult}
+              correcting={csReviewCorrecting}
+              corrections={csReviewCorrections}
+              error={csReviewError}
+              setError={setCsReviewError}
+              onCorrect={() => handleCorrectFromReview('Agent 5: CS Academic', csReviewResult, setCsReviewCorrecting, setCsReviewCorrections, setCsReviewError)}
+              onAccept={() => acceptCorrections(csReviewCorrections, setCsReviewCorrections)}
+              onDiscard={() => setCsReviewCorrections(null)}
+            />
           </div>
 
           <div className="agent-section consolidation-section">
@@ -1424,6 +1520,16 @@ function App() {
                 </div>
               </>
             )}
+            <CorrectionPanel
+              result={consolidationResult}
+              correcting={consolidationCorrecting}
+              corrections={consolidationCorrections}
+              error={consolidationError}
+              setError={setConsolidationError}
+              onCorrect={() => handleCorrectFromReview('Final Consolidation', consolidationResult, setConsolidationCorrecting, setConsolidationCorrections, setConsolidationError)}
+              onAccept={() => acceptCorrections(consolidationCorrections, setConsolidationCorrections)}
+              onDiscard={() => setConsolidationCorrections(null)}
+            />
           </div>
 
           <div className="export-actions-bar">
@@ -2581,6 +2687,55 @@ function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize =
           <button className="primary" type="button" onClick={() => onSave({ activities, duration, teamSize, budget })}>Save</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CorrectionPanel({ result, correcting, corrections, onCorrect, onAccept, onDiscard, error, setError }) {
+  if (!result) return null;
+  return (
+    <div className="correction-bar-wrap">
+      <button
+        className="secondary correction-trigger-btn"
+        type="button"
+        disabled={correcting}
+        onClick={onCorrect}
+      >
+        {correcting
+          ? <Loader2 className="spin" size={14} aria-hidden="true" />
+          : <Wand2 size={14} aria-hidden="true" />}
+        {correcting ? 'Generating corrections…' : 'Correct Proposal'}
+      </button>
+
+      {error && <p className="error-banner correction-error">{error}</p>}
+
+      {corrections && (
+        <div className="correction-preview">
+          <div className="correction-preview-header">
+            <span className="correction-preview-title">Suggested Corrections</span>
+            {corrections.explanation && (
+              <p className="correction-explanation">{corrections.explanation}</p>
+            )}
+          </div>
+          <div className="correction-fields">
+            {Object.entries(corrections.corrections || {}).map(([field, text]) => (
+              <div key={field} className="correction-field">
+                <span className="correction-field-label">{PROPOSAL_FIELD_LABELS[field] || field}</span>
+                <p className="correction-field-text">{text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="correction-actions">
+            <button className="primary" type="button" onClick={onAccept}>
+              <CheckCircle2 size={14} aria-hidden="true" />
+              Accept Changes
+            </button>
+            <button className="secondary" type="button" onClick={onDiscard}>
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

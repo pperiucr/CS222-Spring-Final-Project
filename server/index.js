@@ -3,7 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { proposalLatexToPdf } from './pdfExport.js';
 import { answerAgentQuestion, generateProposal, startAgentSession, buildLatexFromOutput } from './proposalGenerator.js';
-import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference, reviewProposal, autoFixField, reviewCompleteness, reviewResearchQuality, reviewMethodology, reviewConsistency, reviewCsAcademic, consolidateReviews } from './claudeRefine.js';
+import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference, reviewProposal, autoFixField, reviewCompleteness, reviewResearchQuality, reviewMethodology, reviewConsistency, reviewCsAcademic, consolidateReviews, correctFromReview } from './claudeRefine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -216,6 +216,16 @@ app.post('/api/refine/problem', async (request, response) => {
       error: 'Problem statement refinement failed.',
       detail: error instanceof Error ? error.message : String(error)
     });
+  }
+});
+
+app.post('/api/review/correct', async (request, response) => {
+  try {
+    const { proposalOutput, agentName, feedback } = request.body || {};
+    const result = await correctFromReview(proposalOutput || {}, agentName || '', feedback || {});
+    response.json(result);
+  } catch (error) {
+    response.status(500).json({ error: 'Correction failed.', detail: error.message });
   }
 });
 
