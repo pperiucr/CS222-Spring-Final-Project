@@ -14,7 +14,7 @@ const MOCK = {
     'Integrating retrieval-augmented generation (RAG) with network topology context will reduce hallucination rate in generated configuration commands by at least 40%.',
     'The proposed agent will reduce average incident response time by 30% compared to manual operator workflows in simulated NOC scenarios.'
   ],
-  methodology: 'This study adopts an experimental research design combining dataset construction, model fine-tuning, and controlled simulation testing. A corpus of annotated network operation transcripts will be constructed from open NOC logs and synthetic examples. A transformer-based agent will be fine-tuned and evaluated against baseline models using intent accuracy, execution correctness, and latency metrics. Experiments will be conducted in a simulated network environment using GNS3 with representative enterprise topologies.',
+  methodologyText: 'This study adopts an experimental research design combining dataset construction, model fine-tuning, and controlled simulation testing. A corpus of annotated network operation transcripts will be constructed from open NOC logs and synthetic examples. A transformer-based agent will be fine-tuned and evaluated against baseline models using intent accuracy, execution correctness, and latency metrics. Experiments will be conducted in a simulated network environment using GNS3 with representative enterprise topologies.',
   timelineActivities: [
     { name: 'Literature Review & Dataset Collection', months: 'Week 1' },
     { name: 'Model Design & Fine-Tuning', months: 'Week 2' },
@@ -447,7 +447,7 @@ Distribute all activities across the full duration. Keep existing activity names
 }
 
 export async function generateMethodology(researchType, dataSource, tools, experimentDescription) {
-  if (IS_MOCK) return MOCK.methodology;
+  if (IS_MOCK) return MOCK.methodologyText;
   return callGemini(
     `You are a research proposal expert. Write a clear, structured methodology section (4-6 sentences) for a research proposal. Cover the approach, data collection, tools used, and how the experiment is designed. Professional academic tone. Return only the methodology text, nothing else.`,
     `Research type: ${researchType}\nData source: ${dataSource}\nTools: ${tools.join(', ')}\nExperiment description: ${experimentDescription}`
