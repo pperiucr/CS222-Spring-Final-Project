@@ -1175,6 +1175,38 @@ export function buildLatexFromOutput(output) {
     return `\\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]\n${lines.map(l => `\\item ${escapeLatex(l)}`).join('\n')}\n\\end{itemize}`;
   }
 
+  // render methodology as bulleted phases, handling:
+  //   "Phase 1: text; Phase 2: text"  (inline phase markers)
+  //   "Phase 1: text\nPhase 2: text"  (newline-separated)
+  //   "(1) text (2) text"             (parenthesised numbers)
+  //   plain paragraph                 (no markers → single bullet per sentence)
+  function methodologyToItemize(text) {
+    const s = String(text || '').trim();
+    // try splitting on Phase N / Step N / Stage N markers (inline or newline)
+    let parts = s.split(/\b(?:Phase|Step|Stage)\s+\d+[:\s(]*/i).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      // re-attach label: scan original for markers to prefix each part
+      const labels = [...s.matchAll(/\b((?:Phase|Step|Stage)\s+\d+)[:\s(]*/gi)].map(m => m[1]);
+      return `\\begin{itemize}[leftmargin=1.4em,itemsep=3pt,topsep=2pt]\n${parts.map((p, i) => `\\item \\textbf{${escapeLatex(labels[i] || '')}.} ${escapeLatex(p)}`).join('\n')}\n\\end{itemize}`;
+    }
+    // try splitting on parenthesised/semicolon-separated numbered items: (1) … (2) …
+    parts = s.split(/\s*[;]\s*(?=\(\d+\))|\s*(?=\(\d+\)\s)/).map(p => p.replace(/^\(\d+\)\s*/, '').trim()).filter(Boolean);
+    if (parts.length > 1) {
+      return `\\begin{itemize}[leftmargin=1.4em,itemsep=3pt,topsep=2pt]\n${parts.map(p => `\\item ${escapeLatex(p)}`).join('\n')}\n\\end{itemize}`;
+    }
+    // try line-by-line split
+    const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length > 1) {
+      return `\\begin{itemize}[leftmargin=1.4em,itemsep=3pt,topsep=2pt]\n${lines.map(l => `\\item ${escapeLatex(l)}`).join('\n')}\n\\end{itemize}`;
+    }
+    // single block — split into sentences as bullet points
+    const sentences = s.split(/(?<=[.!?])\s+/).map(p => p.trim()).filter(Boolean);
+    if (sentences.length > 1) {
+      return `\\begin{itemize}[leftmargin=1.4em,itemsep=3pt,topsep=2pt]\n${sentences.map(p => `\\item ${escapeLatex(p)}`).join('\n')}\n\\end{itemize}`;
+    }
+    return latexParagraph(s);
+  }
+
   // parse "Key: Value" or "Key — Value" lines into table rows
   function parseKVLines(text) {
     return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
@@ -1299,7 +1331,7 @@ ${hypothesisToItemize(hypothesis)}
 ` : ''}
 ${(methodology || tools) ? `
 \\section{Methodology}
-${methodology ? latexParagraph(methodology) : ''}
+${methodology ? methodologyToItemize(methodology) : ''}
 ${tools ? `
 \\medskip
 \\textbf{Tools and Technologies:} ${escapeLatex(tools)}
