@@ -22,6 +22,24 @@ const MOCK = {
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  csReview: {
+    overall_score: 86,
+    dimensions: [
+      { name: 'Technical Clarity',   score: 9, max: 10, notes: 'Algorithms and system components are well described. Minor improvements needed in formal notation.' },
+      { name: 'Research Gap',        score: 8, max: 10, notes: 'Gap is identified but needs stronger contrast against specific recent work.' },
+      { name: 'Methodology',         score: 7, max: 10, notes: 'Tools and approach described but datasets and baselines are absent.' },
+      { name: 'Experimental Design', score: 8, max: 10, notes: 'Experimental framework is reasonable but evaluation metrics need specification.' },
+      { name: 'Academic Writing',    score: 9, max: 10, notes: 'Well-structured with clear language. Minor redundancy in the motivation section.' },
+      { name: 'Technical Merit',     score: 8, max: 10, notes: 'Approach is sound and feasible. Threats to validity not addressed.' }
+    ],
+    major_recommendations: [
+      'Explicitly compare the proposed NLP-RL framework against existing SDN self-healing approaches.',
+      'Define baseline methods for fault diagnosis and recovery.',
+      'Add evaluation metrics such as Precision, Recall, F1 Score, Recovery Time, and Network Availability.',
+      'Clarify dataset generation and fault injection procedures.',
+      'Strengthen the novelty statement by highlighting the integration of NLP-based diagnosis and RL-based remediation.'
+    ]
+  },
   consistency: {
     inconsistencies: [
       {
@@ -433,6 +451,50 @@ export async function reviewProposal(proposalOutput) {
     };
   }
   return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+const CS_ACADEMIC_REVIEW_SYSTEM_PROMPT = `You are a Computer Science faculty member conducting a thorough academic review of a research proposal.
+
+Evaluate the proposal on exactly these six dimensions (scored out of 10):
+
+1. Technical Clarity — Are algorithms, models, and system components clearly explained? Are technical terms used correctly?
+2. Research Gap — Is the gap in existing CS knowledge clearly identified? Is the novelty convincingly presented relative to prior art?
+3. Methodology — Are datasets, tools, baselines, and evaluation metrics adequately described? Can the experiments be reproduced?
+4. Experimental Design — Is the experimental setup rigorous with proper controls, splits, and statistical validity?
+5. Academic Writing — Grammar, clarity, tone, redundancy, and logical organization.
+6. Technical Merit — Technical accuracy, feasibility, evaluation rigor, threats to validity, and expected contributions to the field.
+
+Compute an overall CS review score out of 100 (weighted average of dimension scores).
+
+Provide 3–6 major recommendations: specific, prioritized, actionable improvements the author must address before submission.
+
+Return strict JSON:
+{
+  "overall_score": <integer 0-100>,
+  "dimensions": [
+    { "name": "Technical Clarity",   "score": <0-10>, "max": 10, "notes": "1-2 sentences" },
+    { "name": "Research Gap",        "score": <0-10>, "max": 10, "notes": "1-2 sentences" },
+    { "name": "Methodology",         "score": <0-10>, "max": 10, "notes": "1-2 sentences" },
+    { "name": "Experimental Design", "score": <0-10>, "max": 10, "notes": "1-2 sentences" },
+    { "name": "Academic Writing",    "score": <0-10>, "max": 10, "notes": "1-2 sentences" },
+    { "name": "Technical Merit",     "score": <0-10>, "max": 10, "notes": "1-2 sentences" }
+  ],
+  "major_recommendations": [
+    "Specific recommendation 1",
+    "..."
+  ]
+}
+
+Be rigorous. Reference specific content from the proposal. Return only the JSON object.`;
+
+export async function reviewCsAcademic(proposalOutput) {
+  if (IS_MOCK) return MOCK.csReview;
+  const summary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) return MOCK.csReview;
+  return callGeminiJson(CS_ACADEMIC_REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
 }
 
 const CONSISTENCY_AGENT_SYSTEM_PROMPT = `You are a consistency reviewer for research proposals. Your job is to detect cross-section alignment issues that could undermine the proposal's credibility.

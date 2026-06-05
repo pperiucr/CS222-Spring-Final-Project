@@ -281,6 +281,10 @@ function App() {
   const [consistencyResult, setConsistencyResult] = useState(null);
   const [consistencyError, setConsistencyError] = useState('');
   const [consistencyPromptOpen, setConsistencyPromptOpen] = useState(false);
+  const [csReviewLoading, setCsReviewLoading] = useState(false);
+  const [csReviewResult, setCsReviewResult] = useState(null);
+  const [csReviewError, setCsReviewError] = useState('');
+  const [csReviewPromptOpen, setCsReviewPromptOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -324,6 +328,19 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleCsReview() {
+    setCsReviewLoading(true);
+    setCsReviewError('');
+    try {
+      const result = await postJson('/api/review/cs-academic', { proposalOutput });
+      setCsReviewResult(result);
+    } catch (err) {
+      setCsReviewError(err.message || 'CS academic review failed.');
+    } finally {
+      setCsReviewLoading(false);
     }
   }
 
@@ -1186,6 +1203,74 @@ function App() {
                     {consistencyResult.consistent_pairs.map((pair, i) => (
                       <span key={i} className="consistency-pair-tag">{pair}</span>
                     ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="agent-section">
+            <div className="agent-header">
+              <div className="agent-title-group">
+                <span className="agent-badge">Agent 6</span>
+                <h2 className="agent-heading">CS Academic Reviewer</h2>
+              </div>
+              <button className="primary" type="button" onClick={handleCsReview} disabled={csReviewLoading}>
+                {csReviewLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ClipboardCheck size={16} aria-hidden="true" />}
+                {csReviewLoading ? 'Reviewing…' : 'Run Agent'}
+              </button>
+            </div>
+
+            <button className="agent-prompt-toggle" type="button" onClick={() => setCsReviewPromptOpen((v) => !v)}>
+              <ChevronDown size={14} className={csReviewPromptOpen ? 'agent-chevron-open' : ''} aria-hidden="true" />
+              Prompt
+            </button>
+
+            {csReviewPromptOpen && (
+              <pre className="agent-prompt-box">{`Act as a Computer Science faculty reviewer.\n\nEvaluate:\n1. Technical Clarity\n   - Algorithms and models clearly explained?\n   - Technical terms used correctly?\n2. Research Gap Articulation\n   - Gap clearly identified?\n   - Novelty convincingly presented?\n3. Methodology Completeness\n   - Datasets, tools, baselines, metrics described?\n   - Experiments reproducible?\n4. Problem–Method Alignment\n   - Solution addresses the stated problem?\n   - Hypotheses align with methodology?\n5. Academic Writing Quality\n   - Grammar, clarity, tone, redundancy, organization\n6. CS Research Standards\n   - Technical accuracy, feasibility, evaluation\n     rigor, threats to validity, contributions\n\nScore each 1–10. Return overall score /100\nand major recommendations.\n\nReturn JSON.`}</pre>
+            )}
+
+            {csReviewError && <p className="error-banner">{csReviewError}</p>}
+
+            {csReviewResult && (
+              <>
+                <div className="cs-overall-block">
+                  <div className="cs-overall-top">
+                    <span className="cs-overall-label">Overall CS Review Score</span>
+                    <span className="cs-overall-score">
+                      {csReviewResult.overall_score}
+                      <span className="cs-overall-max">/100</span>
+                    </span>
+                  </div>
+                  <div className="review-score-bar-wrap">
+                    <div className="review-score-bar" style={{ width: `${csReviewResult.overall_score}%`, background: scoreColor(csReviewResult.overall_score) }} />
+                  </div>
+                </div>
+
+                <div className="cs-dimensions">
+                  {(csReviewResult.dimensions || []).map((dim) => {
+                    const pct = Math.round((dim.score / dim.max) * 100);
+                    return (
+                      <div key={dim.name} className="cs-dimension-row">
+                        <span className="cs-dimension-label">{dim.name}</span>
+                        <div className="review-dimension-bar-wrap">
+                          <div className="review-dimension-bar" style={{ width: `${pct}%`, background: scoreColor(pct) }} />
+                        </div>
+                        <span className="cs-dimension-score">{dim.score}<span className="cs-dimension-max">/{dim.max}</span></span>
+                        {dim.notes && <p className="cs-dimension-notes">{dim.notes}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {(csReviewResult.major_recommendations || []).length > 0 && (
+                  <div className="cs-recommendations">
+                    <h3 className="cs-rec-heading">Major Recommendations</h3>
+                    <ol className="cs-rec-list">
+                      {csReviewResult.major_recommendations.map((rec, i) => (
+                        <li key={i} className="cs-rec-item">{rec}</li>
+                      ))}
+                    </ol>
                   </div>
                 )}
               </>

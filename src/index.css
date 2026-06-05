@@ -1656,6 +1656,113 @@ th {
   }
 }
 
+/* CS Academic Reviewer (Agent 6) */
+.cs-overall-block {
+  margin: 16px 0 14px;
+}
+
+.cs-overall-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cs-overall-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #28584b;
+}
+
+.cs-overall-score {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #1f2d32;
+  line-height: 1;
+}
+
+.cs-overall-max {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6b8e9b;
+}
+
+.cs-dimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cs-dimension-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 52px;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 10px;
+}
+
+.cs-dimension-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #3d5c65;
+  white-space: nowrap;
+}
+
+.cs-dimension-score {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1f2d32;
+  text-align: right;
+}
+
+.cs-dimension-max {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b8e9b;
+}
+
+.cs-dimension-notes {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #5a7f8b;
+  line-height: 1.4;
+}
+
+.cs-recommendations {
+  border-top: 1px solid #e3eaed;
+  padding-top: 16px;
+}
+
+.cs-rec-heading {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #1f2d32;
+}
+
+.cs-rec-list {
+  padding-left: 20px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cs-rec-item {
+  font-size: 0.88rem;
+  color: #2d4a52;
+  line-height: 1.5;
+  padding-left: 4px;
+}
+
+@media (max-width: 920px) {
+  .cs-dimension-row {
+    grid-template-columns: 130px 1fr 44px;
+  }
+}
+
 /* Consistency Reviewer (Agent 5) */
 .consistency-overall-inconsistencies-found { background: #fee2e2; color: #991b1b; }
 .consistency-overall-mostly-consistent     { background: #fef3c7; color: #92400e; }
