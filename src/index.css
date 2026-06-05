@@ -325,26 +325,27 @@ textarea:focus {
   justify-content: space-between;
   gap: 12px;
   border: 1px solid #cbd7dc;
-  border-radius: 8px;
-  padding: 11px 12px;
-  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px 18px;
+  background: #f8fafb;
 }
 
-.memory-bar div:first-child {
+.memory-bar-info {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
 .memory-bar strong {
-  color: #26363b;
+  color: #1f2d32;
   font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .memory-bar span {
-  color: #647177;
-  font-size: 0.82rem;
-  font-weight: 700;
+  color: #6b8e9b;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .memory-actions {

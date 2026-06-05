@@ -464,14 +464,19 @@ function App() {
 
   useEffect(() => {
     if (!memoryReady) return;
-
-    if (!topicInput && !fieldSuggestions.length && !decisions.length && !result) {
-      return;
-    }
-
     saveMemory({ silent: true });
   }, [
     memoryReady,
+    // Path A
+    proposalOutput,
+    completedSteps,
+    projectDetails,
+    researchProblemData,
+    methodologyData,
+    timelineActivities,
+    risksData,
+    referencesData,
+    // Path B
     topicInput,
     project,
     fieldSuggestions,
@@ -736,6 +741,16 @@ function App() {
   function saveMemory({ silent = false } = {}) {
     const snapshot = {
       savedAt: new Date().toISOString(),
+      // Path A — proposal stepper
+      proposalOutput,
+      completedSteps,
+      projectDetails,
+      researchProblemData,
+      methodologyData,
+      timelineActivities,
+      risksData,
+      referencesData,
+      // Path B — suggestion workflow
       topicInput,
       project,
       fieldSuggestions,
@@ -752,7 +767,7 @@ function App() {
     setMemorySavedAt(snapshot.savedAt);
 
     if (!silent) {
-      setRunLog((current) => [...current, logEntry('Memory', 'Saved workspace memory.')]);
+      setRunLog((current) => [...current, logEntry('Memory', 'Saved workspace.')]);
     }
   }
 
@@ -765,7 +780,19 @@ function App() {
 
     try {
       const snapshot = JSON.parse(raw);
-      setTopicInput(snapshot.topicInput || '');
+
+      // Path A — restore proposal stepper state
+      if (snapshot.proposalOutput)     setProposalOutput((prev) => ({ ...prev, ...snapshot.proposalOutput }));
+      if (snapshot.completedSteps)     setCompletedSteps((prev) => ({ ...prev, ...snapshot.completedSteps }));
+      if (snapshot.projectDetails)     setProjectDetails((prev) => ({ ...prev, ...snapshot.projectDetails }));
+      if (snapshot.researchProblemData) setResearchProblemData(snapshot.researchProblemData);
+      if (snapshot.methodologyData)    setMethodologyData(snapshot.methodologyData);
+      if (snapshot.timelineActivities && Array.isArray(snapshot.timelineActivities)) setTimelineActivities(snapshot.timelineActivities);
+      if (snapshot.risksData)          setRisksData(snapshot.risksData);
+      if (snapshot.referencesData)     setReferencesData(snapshot.referencesData);
+
+      // Path B — restore suggestion workflow state
+      if (snapshot.topicInput !== undefined) setTopicInput(snapshot.topicInput || '');
       setProject({ ...EMPTY_PROJECT, ...(snapshot.project || {}) });
       setFieldSuggestions(Array.isArray(snapshot.fieldSuggestions) ? snapshot.fieldSuggestions : []);
       setDecisions(Array.isArray(snapshot.decisions) ? snapshot.decisions : []);
@@ -789,7 +816,7 @@ function App() {
       }
 
       if (!silent) {
-        setRunLog((current) => [...current, logEntry('Memory', 'Reloaded saved workspace memory.')]);
+        setRunLog((current) => [...current, logEntry('Memory', 'Reloaded saved workspace.')]);
       }
     } catch {
       setError('Saved memory is unreadable. Clear it and save again.');
@@ -1396,6 +1423,24 @@ function App() {
             </button>
           </div>
 
+          <div className="memory-bar">
+            <div className="memory-bar-info">
+              <strong>Workspace Memory</strong>
+              <span>{memorySavedAt ? `Last saved ${formatSavedAt(memorySavedAt)}` : 'Not saved yet'}</span>
+            </div>
+            <div className="memory-actions">
+              <button className="secondary" type="button" onClick={() => saveMemory()}>
+                Save
+              </button>
+              <button className="secondary" type="button" onClick={() => loadSavedMemory()}>
+                Reload
+              </button>
+              <button className="secondary" type="button" onClick={clearSavedMemory}>
+                Clear
+              </button>
+            </div>
+          </div>
+
           {checklistOpen && (
             <div className="checklist-overlay" onClick={() => setChecklistOpen(false)}>
               <div className="checklist-modal" onClick={(e) => e.stopPropagation()}>
@@ -1570,24 +1615,6 @@ function App() {
             <button className="secondary icon-button" onClick={reset} type="button" aria-label="Reset">
               <RefreshCw size={18} aria-hidden="true" />
             </button>
-          </div>
-
-          <div className="memory-bar">
-            <div>
-              <strong>Memory</strong>
-              <span>{memorySavedAt ? `Saved ${formatSavedAt(memorySavedAt)}` : 'No saved workspace yet'}</span>
-            </div>
-            <div className="memory-actions">
-              <button className="secondary" type="button" onClick={() => saveMemory()}>
-                Save
-              </button>
-              <button className="secondary" type="button" onClick={() => loadSavedMemory()}>
-                Reload
-              </button>
-              <button className="secondary" type="button" onClick={clearSavedMemory}>
-                Clear
-              </button>
-            </div>
           </div>
 
           {error ? <p className="error-banner">{error}</p> : null}
