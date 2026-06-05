@@ -1107,59 +1107,201 @@ ${bullets.length ? `\n\\begin{itemize}\n${bullets.join('\n')}\n\\end{itemize}` :
 }
 
 export function buildLatexFromOutput(output) {
-  const title = clean(output.research_title) || 'Research Proposal';
-  const pd = output.projectDetails || {};
-  const studentName = clean(pd.student_name) || 'Prakash Perimbeti';
-  const supervisor = clean(pd.supervisor) || 'Prof. Yue Dong';
-  const university = clean(pd.university) || 'UC Riverside';
-  const department = clean(pd.department) || 'Computer Science';
-  const degreeProgram = clean(pd.degree_program) || 'MS';
-  const researchArea = clean(pd.research_area) || 'AI/ML';
-  const objective = clean(output.objective);
+  const title      = clean(output.research_title) || 'Research Proposal';
+  const pd         = output.projectDetails || {};
+  const studentName   = clean(pd.student_name)   || 'Prakash Perimbeti';
+  const supervisor    = clean(pd.supervisor)      || 'Prof. Yue Dong';
+  const university    = clean(pd.university)      || 'UC Riverside';
+  const department    = clean(pd.department)      || 'Computer Science';
+  const degreeProgram = clean(pd.degree_program)  || 'MS';
+  const researchArea  = clean(pd.research_area)   || 'AI/ML';
+  const objective        = clean(output.objective);
   const problemStatement = clean(output.problem_statement);
-  const hypothesis = clean(output.hypothesis);
-  const motivation = clean(output.motivation);
-  const methodology = clean(output.methodology_text);
-  const tools = clean(output.tools);
-  const contributions = clean(output.contributions);
-  const timeline = clean(output.timeline_budget);
+  const hypothesis       = clean(output.hypothesis);
+  const motivation       = clean(output.motivation);
+  const methodology      = clean(output.methodology_text);
+  const tools            = clean(output.tools);
+  const contributions    = clean(output.contributions);
+  const timeline         = clean(output.timeline_budget);
   const timelineStructured = output.timeline_structured || null;
   const risks = clean(output.risks_mitigation);
-  const refs = clean(output.references);
+  const refs  = clean(output.references);
 
-  return String.raw`\documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
+  // ---- helpers ----
+
+  // wrap lines of bullet/numbered text into a LaTeX itemize
+  function toItemize(text) {
+    const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    const items = lines.map(l => l.replace(/^[\d]+\.\s*/, '').replace(/^[-•]\s*/, ''));
+    return `\\begin{itemize}[leftmargin=1.4em,itemsep=1pt,topsep=2pt]\n${items.map(i => `\\item ${escapeLatex(i)}`).join('\n')}\n\\end{itemize}`;
+  }
+
+  // full-width two-column table with navy header
+  function navyTable(colSpec, headerCells, rows) {
+    const hdr = headerCells.map(h => `\\textbf{\\color{white}${escapeLatex(h)}}`).join(' & ');
+    const body = rows.map((r, i) => {
+      const bg = i % 2 === 0 ? '' : `\\rowcolor{rowtint}`;
+      const cells = r.map((c, ci) => ci === 0 ? `\\textbf{${escapeLatex(c)}}` : escapeLatex(c));
+      return `${bg}${cells.join(' & ')} \\\\`;
+    }).join('\n\\hline\n');
+    return `\\begin{tabularx}{\\linewidth}{${colSpec}}\n\\hline\n\\rowcolor{navydark}${hdr} \\\\\n\\hline\n${body}\n\\hline\n\\end{tabularx}`;
+  }
+
+  // full-width two-column table with orange header
+  function orangeTable(colSpec, headerCells, rows) {
+    const hdr = headerCells.map(h => `\\textbf{\\color{white}${escapeLatex(h)}}`).join(' & ');
+    const body = rows.map((r, i) => {
+      const bg = i % 2 === 0 ? '' : `\\rowcolor{rowtint}`;
+      const cells = r.map((c, ci) => ci === 0 ? `\\textbf{${escapeLatex(c)}}` : escapeLatex(c));
+      return `${bg}${cells.join(' & ')} \\\\`;
+    }).join('\n\\hline\n');
+    return `\\begin{tabularx}{\\linewidth}{${colSpec}}\n\\hline\n\\rowcolor{accorange}${hdr} \\\\\n\\hline\n${body}\n\\hline\n\\end{tabularx}`;
+  }
+
+  // parse "Key: Value" or "Key — Value" lines into table rows
+  function parseKVLines(text) {
+    return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+      const m = l.match(/^(.+?)(?:\s*[:—–-]\s*)(.+)$/);
+      return m ? [m[1].trim(), m[2].trim()] : [l, ''];
+    });
+  }
+
+  // build the timeline section
+  function buildTimeline() {
+    if (timelineStructured && Array.isArray(timelineStructured.activities) && timelineStructured.activities.length) {
+      const rows = timelineStructured.activities.map(a => [a.name, a.months]);
+      return navyTable('>{{\\bfseries\\small}}X >{{\\small}}l', ['Activity', 'Duration'], rows);
+    }
+    if (!timeline) return '';
+    const rows = parseKVLines(timeline);
+    if (rows.length > 1 && rows.every(r => r[1])) {
+      return navyTable('>{{\\bfseries\\small}}X >{{\\small}}l', ['Activity', 'Duration'], rows);
+    }
+    return latexParagraph(timeline);
+  }
+
+  // build the risks section
+  function buildRisks() {
+    if (!risks) return '';
+    const rows = String(risks).split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+      const m = l.match(/^(.+?)(?:\s*[—–:]\s*)(.+)$/);
+      return m ? [m[1].trim(), m[2].trim()] : [l, ''];
+    });
+    if (rows.length > 1 && rows.every(r => r[1])) {
+      return orangeTable('>{{\\bfseries\\small}}X >{{\\small}}X', ['Risk', 'Mitigation'], rows);
+    }
+    return latexParagraph(risks);
+  }
+
+  // build references as a two-column table
+  function buildRefs() {
+    if (!refs) return '';
+    const lines = String(refs).split('\n').map(l => l.trim()).filter(Boolean);
+    const parsed = lines.map((l, i) => {
+      const m = l.match(/^\[(.+?)\]\s+(.+)$/);
+      return m ? [`[${m[1]}]`, m[2]] : [`[${i + 1}]`, l];
+    });
+    if (parsed.length > 0) {
+      const hdr = [`\\textbf{\\color{white}Key}`, `\\textbf{\\color{white}Citation}`].join(' & ');
+      const body = parsed.map((r, i) => {
+        const bg = i % 2 === 0 ? '' : `\\rowcolor{rowtint}`;
+        return `${bg}\\textbf{\\color{navymed}${escapeLatex(r[0])}} & \\small ${escapeLatex(r[1])} \\\\`;
+      }).join('\n\\hline\n');
+      return `\\begin{tabularx}{\\linewidth}{>{{\\small}}l >{{\\small}}X}\n\\hline\n\\rowcolor{navydark}${hdr} \\\\\n\\hline\n${body}\n\\hline\n\\end{tabularx}`;
+    }
+    return latexParagraph(refs);
+  }
+
+  // ---- document ----
+  const footerText = escapeLatex(`CS 222 Spring 2026 --- ${title} --- ${studentName}`);
+
+  return String.raw`\documentclass[10pt]{article}
+\usepackage[margin=0.75in,top=0.65in,bottom=0.7in]{geometry}
+\usepackage[T1]{fontenc}
 \usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{multicol}
 \usepackage{enumitem}
-\setlist{nosep}
-\title{${escapeLatex(title)}}
-\author{\small ${escapeLatex(studentName)} (${escapeLatex(degreeProgram)}) $|$ ${escapeLatex(department)}, ${escapeLatex(university)} $|$ ${escapeLatex(researchArea)} $|$ Supervisor: ${escapeLatex(supervisor)}}
-\date{}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{setspace}
+
+\definecolor{navydark}{HTML}{1B3A5C}
+\definecolor{navymed}{HTML}{2C5F8A}
+\definecolor{accorange}{HTML}{C47A1A}
+\definecolor{callteal}{HTML}{1E6B9B}
+\definecolor{rowtint}{HTML}{EAF3F8}
+\definecolor{rowalt}{HTML}{F5FAFE}
+
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\setlength{\arrayrulewidth}{0.4pt}
+
+\titleformat{\section}
+  {\large\bfseries\color{navydark}}
+  {\colorbox{navydark}{\color{white}\footnotesize\bfseries\thesection}\hspace{6pt}}
+  {0pt}{}
+\titlespacing*{\section}{0pt}{14pt}{5pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\footnotesize\color{gray}${footerText}}
 
 \begin{document}
-\maketitle
 
-${objective ? `\\begin{abstract}\n${latexParagraph(objective)}\n\\end{abstract}\n` : ''}
+% ── Title Block ──────────────────────────────────────────────────────────────
+\begin{center}
+{\small\color{gray}CS 222 --- Final Project Proposal \textbar{} Spring 2026}\\[5pt]
+{\LARGE\bfseries\color{navydark}${escapeLatex(title)}}\\[4pt]
+{\small\itshape ${escapeLatex(department)}, ${escapeLatex(university)}}\\[3pt]
+{\small\textbf{${escapeLatex(studentName)}} \textbar{} ${escapeLatex(degreeProgram)} \textbar{} ${escapeLatex(researchArea)} \textbar{} Supervisor: ${escapeLatex(supervisor)}}
+\end{center}
+{\color{navydark}\rule{\linewidth}{1.5pt}}
 
-${problemStatement ? `\\section{Problem Statement}\n${latexParagraph(problemStatement)}\n` : ''}
-
-${hypothesis ? `\\section{Hypothesis}\n${buildNumberedListLatex(hypothesis)}\n` : ''}
-
-${motivation ? `\\section{Motivation}\n${latexParagraph(motivation)}\n` : ''}
-
-${methodology ? `\\section{Methodology}\n${latexParagraph(methodology)}\n` : ''}
-
-${tools ? `\\section{Tools}\n${latexParagraph(tools)}\n` : ''}
-
-${contributions ? `\\section{Expected Contributions}\n${latexParagraph(contributions)}\n` : ''}
-
-${timelineStructured || timeline ? `\\section{Timeline}
-${buildTimelineLatex(timelineStructured, timeline)}
+${objective ? `
+\\section{Introduction and Objective}
+${latexParagraph(objective)}
 ` : ''}
-
-${risks ? `\\section{Risks and Mitigation}\n${latexParagraph(risks)}\n` : ''}
-
-${refs ? `\\section{References}\n${latexParagraph(refs)}\n` : ''}
+${(problemStatement || motivation) ? `
+\\section{Problem Statement and Motivation}
+${problemStatement ? latexParagraph(problemStatement) : ''}
+${motivation ? `\n\\medskip\n${latexParagraph(motivation)}` : ''}
+` : ''}
+${hypothesis ? `
+\\section{Research Question and Hypothesis}
+${buildNumberedListLatex(hypothesis)}
+` : ''}
+${(methodology || tools) ? `
+\\section{Methodology}
+${methodology ? latexParagraph(methodology) : ''}
+${tools ? `
+\\medskip
+\\textbf{Tools and Technologies:} ${escapeLatex(tools)}
+` : ''}
+` : ''}
+${contributions ? `
+\\section{Expected Contributions}
+${toItemize(contributions)}
+` : ''}
+${(timelineStructured || timeline) ? `
+\\section{Timeline and Resources}
+${buildTimeline()}
+` : ''}
+${risks ? `
+\\section{Risks and Mitigation}
+${buildRisks()}
+` : ''}
+${refs ? `
+\\section{References}
+${buildRefs()}
+` : ''}
 
 \end{document}
 `;
