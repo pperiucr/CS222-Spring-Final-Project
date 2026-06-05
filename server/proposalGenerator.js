@@ -1123,9 +1123,11 @@ export function buildLatexFromOutput(output) {
   const dataSource       = clean(output.data_source);
   const tools            = clean(output.tools);
   const contributions    = clean(output.contributions);
-  const timeline         = clean(output.timeline_budget);
+  const timeline           = clean(output.timeline_budget);
   const timelineStructured = output.timeline_structured || null;
-  const risks = clean(output.risks_mitigation);
+  const risks              = clean(output.risks_mitigation);
+  const risksStructured    = Array.isArray(output.risks_structured) && output.risks_structured.length
+                               ? output.risks_structured : null;
   const refs  = clean(output.references);
 
   // ---- helpers ----
@@ -1232,14 +1234,21 @@ export function buildLatexFromOutput(output) {
 
   // build the risks section
   function buildRisks() {
-    if (!risks) return '';
-    const rows = String(risks).split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-      const m = l.match(/^(.+?)(?:\s*[—–:]\s*)(.+)$/);
-      return m ? [m[1].trim(), m[2].trim()] : [l, ''];
-    });
-    if (rows.length > 1 && rows.every(r => r[1])) {
-      return orangeTable('>{{\\bfseries\\small}}X >{{\\small}}X', ['Risk', 'Mitigation'], rows);
+    if (!risksStructured && !risks) return '';
+
+    // structured path: render each risk as a parent bullet with mitigation as sub-bullet
+    if (risksStructured) {
+      const items = risksStructured.map((r, i) => {
+        const label    = `\\textbf{Risk ${i + 1} [${escapeLatex(r.category || '')}]:}`;
+        const desc     = escapeLatex(r.description || '');
+        const meta     = `Likelihood: ${escapeLatex(r.likelihood || '')}. Impact: ${escapeLatex(r.impact || '')}.`;
+        const mitig    = r.mitigation ? `\\begin{itemize}[leftmargin=1.6em,itemsep=1pt,topsep=1pt]\n\\item \\textit{Mitigation:} ${escapeLatex(r.mitigation)}\n\\end{itemize}` : '';
+        return `\\item ${label} ${desc} ${meta}\n${mitig}`;
+      });
+      return `\\begin{itemize}[leftmargin=1.4em,itemsep=4pt,topsep=2pt]\n${items.join('\n')}\n\\end{itemize}`;
     }
+
+    // fallback: plain text
     return latexParagraph(risks);
   }
 
@@ -1347,7 +1356,7 @@ ${(timelineStructured || timeline) ? `
 \\section{Timeline and Resources}
 ${buildTimeline()}
 ` : ''}
-${risks ? `
+${(risksStructured || risks) ? `
 \\section{Risks and Mitigation}
 ${buildRisks()}
 ` : ''}

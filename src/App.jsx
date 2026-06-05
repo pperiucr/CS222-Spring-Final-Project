@@ -1687,7 +1687,7 @@ function App() {
                 const text = (data.risks || []).map((r, i) =>
                   `${i + 1}. [${r.category}] ${r.description}\n   Likelihood: ${r.likelihood} | Impact: ${r.impact}\n   Mitigation: ${r.mitigation || 'N/A'}`
                 ).join('\n\n');
-                updateOutput({ risks_mitigation: text });
+                updateOutput({ risks_mitigation: text, risks_structured: data.risks || [] });
                 markComplete('risks');
                 setRisksOpen(false);
               }}
