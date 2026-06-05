@@ -1353,7 +1353,7 @@ ${contributions ? `
 ${toItemize(contributions)}
 ` : ''}
 ${(timelineStructured || timeline) ? `
-\\section{Timeline and Resources}
+\\section{Timeline}
 ${buildTimeline()}
 ` : ''}
 ${(risksStructured || risks) ? `
