@@ -1656,6 +1656,114 @@ th {
   }
 }
 
+/* Research Quality Reviewer (Agent 2) */
+.quality-verdict-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e3eaed;
+}
+
+.quality-verdict-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b8e9b;
+}
+
+.quality-verdict-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
+.quality-verdict-weak           { background: #fee2e2; color: #991b1b; }
+.quality-verdict-needs-revision { background: #fef3c7; color: #92400e; }
+.quality-verdict-acceptable     { background: #dbeafe; color: #1e40af; }
+.quality-verdict-strong         { background: #dcfce7; color: #166534; }
+
+.quality-dimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.quality-dimension-card {
+  border: 1px solid #e3eaed;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fafcfd;
+}
+
+.quality-dim-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.quality-dim-name {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #1f2d32;
+}
+
+.quality-rating-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.quality-rating-weak      { background: #fee2e2; color: #991b1b; }
+.quality-rating-adequate  { background: #fef3c7; color: #92400e; }
+.quality-rating-strong    { background: #dbeafe; color: #1e40af; }
+.quality-rating-excellent { background: #dcfce7; color: #166534; }
+
+.quality-issue-block,
+.quality-suggestion-block {
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.quality-issue-block {
+  background: #fff7f7;
+  border: 1px solid #fecaca;
+}
+
+.quality-suggestion-block {
+  background: #f0faf5;
+  border: 1px solid #bbf7d0;
+}
+
+.quality-block-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+
+.quality-issue-block .quality-block-label      { color: #b91c1c; }
+.quality-suggestion-block .quality-block-label { color: #166534; }
+
+.quality-block-text {
+  margin: 0;
+  font-size: 0.87rem;
+  line-height: 1.5;
+  color: #2d4a52;
+}
+
 /* Proposal Stepper */
 .proposal-stepper-wrap {
   border: 1px solid #cbd7dc;

@@ -22,6 +22,35 @@ const MOCK = {
     { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
+  quality: {
+    dimensions: [
+      {
+        name: 'Novelty',
+        rating: 'weak',
+        issue: 'Proposal discusses SDN fault management but novelty compared to existing RL-based solutions is unclear.',
+        suggestion: 'Clearly explain how NLP-enhanced diagnosis differs from prior work and quantify the expected improvement over RL baselines.'
+      },
+      {
+        name: 'Research Gap',
+        rating: 'adequate',
+        issue: 'A gap is implied but not explicitly stated with reference to the current state of the art.',
+        suggestion: 'Add a dedicated paragraph citing 2–3 key papers and showing precisely where each falls short of the proposed approach.'
+      },
+      {
+        name: 'Contribution',
+        rating: 'adequate',
+        issue: 'The contributions listed are broad and overlap with existing NLP-for-networking literature.',
+        suggestion: 'Enumerate 3 specific, testable contributions and tie each directly to a research question or hypothesis.'
+      },
+      {
+        name: 'Scientific Merit',
+        rating: 'strong',
+        issue: 'Experimental setup is reasonable but lacks detail on statistical significance testing.',
+        suggestion: 'Specify sample sizes, test protocols, and the statistical tests that will be used to validate results.'
+      }
+    ],
+    overall_verdict: 'Needs Revision'
+  },
   completeness: {
     sections: [
       { name: 'Problem Statement',  present: true,  quality: 'strong'   },
@@ -338,6 +367,61 @@ export async function reviewProposal(proposalOutput) {
     };
   }
   return callGeminiJson(REVIEW_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
+}
+
+const QUALITY_AGENT_SYSTEM_PROMPT = `You are a PhD committee member conducting a rigorous review of a research proposal.
+
+Evaluate the proposal on exactly these four dimensions:
+1. Novelty — Is this work genuinely new? How clearly does it differentiate itself from prior art, especially recent work?
+2. Research Gap — Is there a precise, well-justified gap in existing knowledge? Is it backed by references?
+3. Contribution — Are the specific contributions clearly stated, non-trivial, and achievable within scope?
+4. Scientific Merit — Is the methodology sound, reproducible, and capable of producing verifiable results?
+
+For each dimension provide:
+- A specific issue drawn from the actual proposal text (1–2 sentences)
+- A concrete, actionable suggestion to address it (1–2 sentences)
+
+Return strict JSON in exactly this shape:
+{
+  "dimensions": [
+    {
+      "name": "Novelty",
+      "rating": "weak|adequate|strong|excellent",
+      "issue": "...",
+      "suggestion": "..."
+    },
+    {
+      "name": "Research Gap",
+      "rating": "weak|adequate|strong|excellent",
+      "issue": "...",
+      "suggestion": "..."
+    },
+    {
+      "name": "Contribution",
+      "rating": "weak|adequate|strong|excellent",
+      "issue": "...",
+      "suggestion": "..."
+    },
+    {
+      "name": "Scientific Merit",
+      "rating": "weak|adequate|strong|excellent",
+      "issue": "...",
+      "suggestion": "..."
+    }
+  ],
+  "overall_verdict": "Weak|Needs Revision|Acceptable|Strong"
+}
+
+Be specific and reference the actual content of the proposal. Return only the JSON object.`;
+
+export async function reviewResearchQuality(proposalOutput) {
+  if (IS_MOCK) return MOCK.quality;
+  const summary = Object.entries(proposalOutput || {})
+    .filter(([, v]) => v && typeof v === 'string' && v.trim())
+    .map(([k, v]) => `[${k}]\n${v}`)
+    .join('\n\n');
+  if (!summary.trim()) return MOCK.quality;
+  return callGeminiJson(QUALITY_AGENT_SYSTEM_PROMPT, `Proposal content:\n\n${summary}`);
 }
 
 const COMPLETENESS_AGENT_SYSTEM_PROMPT = `Act as a university research proposal reviewer. Analyze the provided proposal content and evaluate these 8 sections:

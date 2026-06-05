@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BotMessageSquare,
   CheckCircle2,
+  AlertTriangle,
   ChevronDown,
   ClipboardCheck,
+  Lightbulb,
   Download,
   FileText,
   FolderOpen,
@@ -259,6 +261,10 @@ function App() {
   const [completenessResult, setCompletenessResult] = useState(null);
   const [completenessError, setCompletenessError] = useState('');
   const [completenessPromptOpen, setCompletenessPromptOpen] = useState(false);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [qualityResult, setQualityResult] = useState(null);
+  const [qualityError, setQualityError] = useState('');
+  const [qualityPromptOpen, setQualityPromptOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -302,6 +308,19 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleQualityReview() {
+    setQualityLoading(true);
+    setQualityError('');
+    try {
+      const result = await postJson('/api/review/quality', { proposalOutput });
+      setQualityResult(result);
+    } catch (err) {
+      setQualityError(err.message || 'Quality review failed.');
+    } finally {
+      setQualityLoading(false);
     }
   }
 
@@ -904,6 +923,74 @@ function App() {
                   )}
                 </div>
               </div>
+            )}
+          </div>
+
+          <div className="agent-section">
+            <div className="agent-header">
+              <div className="agent-title-group">
+                <span className="agent-badge">Agent 2</span>
+                <h2 className="agent-heading">Research Quality Reviewer</h2>
+              </div>
+              <button className="primary" type="button" onClick={handleQualityReview} disabled={qualityLoading}>
+                {qualityLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
+                {qualityLoading ? 'Reviewing…' : 'Run Agent'}
+              </button>
+            </div>
+
+            <button className="agent-prompt-toggle" type="button" onClick={() => setQualityPromptOpen((v) => !v)}>
+              <ChevronDown size={14} className={qualityPromptOpen ? 'agent-chevron-open' : ''} aria-hidden="true" />
+              Prompt
+            </button>
+
+            {qualityPromptOpen && (
+              <pre className="agent-prompt-box">{`Act as a PhD committee member reviewing a research proposal.\n\nEvaluate:\n1. Novelty\n2. Research Gap\n3. Contribution\n4. Scientific Merit\n\nFor each: identify the issue and provide a concrete suggestion.\n\nReturn JSON.`}</pre>
+            )}
+
+            {qualityError && <p className="error-banner">{qualityError}</p>}
+
+            {qualityResult && (
+              <>
+                {qualityResult.overall_verdict && (
+                  <div className="quality-verdict-row">
+                    <span className="quality-verdict-label">Verdict</span>
+                    <span className={`quality-verdict-badge quality-verdict-${qualityResult.overall_verdict.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {qualityResult.overall_verdict}
+                    </span>
+                  </div>
+                )}
+
+                <div className="quality-dimensions">
+                  {(qualityResult.dimensions || []).map((dim) => (
+                    <div key={dim.name} className="quality-dimension-card">
+                      <div className="quality-dim-header">
+                        <span className="quality-dim-name">{dim.name}</span>
+                        <span className={`quality-rating-badge quality-rating-${dim.rating}`}>{dim.rating}</span>
+                      </div>
+
+                      {dim.issue && (
+                        <div className="quality-issue-block">
+                          <span className="quality-block-label">
+                            <AlertTriangle size={13} aria-hidden="true" />
+                            Issue
+                          </span>
+                          <p className="quality-block-text">{dim.issue}</p>
+                        </div>
+                      )}
+
+                      {dim.suggestion && (
+                        <div className="quality-suggestion-block">
+                          <span className="quality-block-label">
+                            <Lightbulb size={13} aria-hidden="true" />
+                            Suggestion
+                          </span>
+                          <p className="quality-block-text">{dim.suggestion}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
