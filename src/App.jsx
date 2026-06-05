@@ -289,6 +289,8 @@ function App() {
   const [consolidationResult, setConsolidationResult] = useState(null);
   const [consolidationError, setConsolidationError] = useState('');
   const [consolidationPromptOpen, setConsolidationPromptOpen] = useState(false);
+  const [exportLatexLoading, setExportLatexLoading] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
     projectDetails: false, researchProblem: false, methodology: false,
     timeline: false, risks: false, references: false
@@ -332,6 +334,24 @@ function App() {
       setReviewError(err.message || 'Auto-fix failed.');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleExportLatex() {
+    setExportLatexLoading(true);
+    try {
+      const { proposalLatex } = await postJson('/api/generate-from-output', { ...proposalOutput, projectDetails });
+      const blob = new Blob([proposalLatex], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${(proposalOutput.research_title || 'proposal').replace(/\s+/g, '_')}.tex`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // no-op — user can use the Generate Proposal popup as fallback
+    } finally {
+      setExportLatexLoading(false);
     }
   }
 
@@ -1360,6 +1380,76 @@ function App() {
               </>
             )}
           </div>
+
+          <div className="export-actions-bar">
+            <button className="secondary" type="button" onClick={handleExportLatex} disabled={exportLatexLoading}>
+              {exportLatexLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
+              LaTeX
+            </button>
+            <button className="primary" type="button" onClick={() => setGeneratePopupOpen(true)}>
+              <FileText size={16} aria-hidden="true" />
+              PDF
+            </button>
+            <button className="secondary" type="button" onClick={() => setChecklistOpen(true)}>
+              <ClipboardCheck size={16} aria-hidden="true" />
+              Review Checklist
+            </button>
+          </div>
+
+          {checklistOpen && (
+            <div className="checklist-overlay" onClick={() => setChecklistOpen(false)}>
+              <div className="checklist-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="checklist-modal-header">
+                  <h2 className="checklist-modal-title">Review Checklist</h2>
+                  <button type="button" className="checklist-close" onClick={() => setChecklistOpen(false)}>
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div className="checklist-group">
+                  <h3 className="checklist-group-title">6-Step Stepper</h3>
+                  {[
+                    ['projectDetails',  'Project Details'],
+                    ['researchProblem', 'Research Problem'],
+                    ['methodology',     'Methodology'],
+                    ['timeline',        'Timeline'],
+                    ['risks',           'Risks & Mitigation'],
+                    ['references',      'References'],
+                  ].map(([key, label]) => (
+                    <div key={key} className={`checklist-item ${completedSteps[key] ? 'checklist-done' : 'checklist-todo'}`}>
+                      {completedSteps[key] ? <CheckCircle2 size={15} aria-hidden="true" /> : <XCircle size={15} aria-hidden="true" />}
+                      <span>{label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="checklist-group">
+                  <h3 className="checklist-group-title">Proposal Sections</h3>
+                  {[
+                    ['research_title',    'Research Title'],
+                    ['objective',         'Objective'],
+                    ['problem_statement', 'Problem Statement'],
+                    ['hypothesis',        'Hypothesis'],
+                    ['motivation',        'Motivation'],
+                    ['methodology_text',  'Methodology'],
+                    ['tools',             'Tools'],
+                    ['contributions',     'Contributions'],
+                    ['timeline_budget',   'Timeline & Budget'],
+                    ['risks_mitigation',  'Risks & Mitigation'],
+                    ['references',        'References'],
+                  ].map(([key, label]) => {
+                    const filled = (proposalOutput[key] || '').trim().length >= 20;
+                    return (
+                      <div key={key} className={`checklist-item ${filled ? 'checklist-done' : 'checklist-todo'}`}>
+                        {filled ? <CheckCircle2 size={15} aria-hidden="true" /> : <XCircle size={15} aria-hidden="true" />}
+                        <span>{label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {generatePopupOpen && (
             <GenerateFormatPopup
