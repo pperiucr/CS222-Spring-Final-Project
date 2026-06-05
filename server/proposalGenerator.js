@@ -1285,10 +1285,13 @@ ${objective ? `
 \\section{Introduction and Objective}
 ${latexParagraph(objective)}
 ` : ''}
-${(problemStatement || motivation) ? `
-\\section{Problem Statement and Motivation}
-${problemStatement ? latexParagraph(problemStatement) : ''}
-${motivation ? `\n\\medskip\n${latexParagraph(motivation)}` : ''}
+${problemStatement ? `
+\\section{Problem Statement}
+${latexParagraph(problemStatement)}
+` : ''}
+${motivation ? `
+\\section{Motivation}
+${latexParagraph(motivation)}
 ` : ''}
 ${hypothesis ? `
 \\section{Hypothesis}
