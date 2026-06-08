@@ -315,6 +315,12 @@ function App() {
   const [csReviewCorrections, setCsReviewCorrections] = useState(null);
   const [consolidationCorrecting, setConsolidationCorrecting] = useState(false);
   const [consolidationCorrections, setConsolidationCorrections] = useState(null);
+  const [completenessAccepted, setCompletenessAccepted] = useState(false);
+  const [qualityAccepted, setQualityAccepted] = useState(false);
+  const [methodologyAccepted, setMethodologyAccepted] = useState(false);
+  const [consistencyAccepted, setConsistencyAccepted] = useState(false);
+  const [csReviewAccepted, setCsReviewAccepted] = useState(false);
+  const [consolidationAccepted, setConsolidationAccepted] = useState(false);
   const [exportLatexLoading, setExportLatexLoading] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
@@ -356,10 +362,11 @@ function App() {
     }
   }
 
-  function acceptCorrections(corrections, setCorrections) {
+  function acceptCorrections(corrections, setCorrections, setAccepted) {
     if (!corrections?.corrections) return;
     updateOutput(corrections.corrections);
     setCorrections(null);
+    if (setAccepted) setAccepted(true);
   }
 
   async function handleAutoFix() {
@@ -404,6 +411,7 @@ function App() {
   async function handleConsolidation() {
     setConsolidationLoading(true);
     setConsolidationError('');
+    setConsolidationAccepted(false);
     try {
       const reviews = {};
       if (completenessResult) reviews['Agent 1: Completeness'] = completenessResult;
@@ -423,6 +431,7 @@ function App() {
   async function handleCsReview() {
     setCsReviewLoading(true);
     setCsReviewError('');
+    setCsReviewAccepted(false);
     try {
       const result = await postJson('/api/review/cs-academic', { proposalOutput });
       setCsReviewResult(result);
@@ -436,6 +445,7 @@ function App() {
   async function handleConsistencyReview() {
     setConsistencyLoading(true);
     setConsistencyError('');
+    setConsistencyAccepted(false);
     try {
       const result = await postJson('/api/review/consistency', { proposalOutput });
       setConsistencyResult(result);
@@ -449,6 +459,7 @@ function App() {
   async function handleMethodologyReview() {
     setMethodologyLoading(true);
     setMethodologyError('');
+    setMethodologyAccepted(false);
     try {
       const result = await postJson('/api/review/methodology', { proposalOutput });
       setMethodologyResult(result);
@@ -462,6 +473,7 @@ function App() {
   async function handleQualityReview() {
     setQualityLoading(true);
     setQualityError('');
+    setQualityAccepted(false);
     try {
       const result = await postJson('/api/review/quality', { proposalOutput });
       setQualityResult(result);
@@ -475,6 +487,7 @@ function App() {
   async function handleCompletenessReview() {
     setCompletenessLoading(true);
     setCompletenessError('');
+    setCompletenessAccepted(false);
     try {
       const result = await postJson('/api/review/completeness', { proposalOutput });
       setCompletenessResult(result);
@@ -1122,10 +1135,11 @@ function App() {
               result={completenessResult}
               correcting={completenessCorrecting}
               corrections={completenessCorrections}
+              accepted={completenessAccepted}
               error={completenessError}
               setError={setCompletenessError}
               onCorrect={() => handleCorrectFromReview('Agent 1: Completeness', completenessResult, setCompletenessCorrecting, setCompletenessCorrections, setCompletenessError)}
-              onAccept={() => acceptCorrections(completenessCorrections, setCompletenessCorrections)}
+              onAccept={() => acceptCorrections(completenessCorrections, setCompletenessCorrections, setCompletenessAccepted)}
               onDiscard={() => setCompletenessCorrections(null)}
             />
           </div>
@@ -1200,10 +1214,11 @@ function App() {
               result={qualityResult}
               correcting={qualityCorrecting}
               corrections={qualityCorrections}
+              accepted={qualityAccepted}
               error={qualityError}
               setError={setQualityError}
               onCorrect={() => handleCorrectFromReview('Agent 2: Research Quality', qualityResult, setQualityCorrecting, setQualityCorrections, setQualityError)}
-              onAccept={() => acceptCorrections(qualityCorrections, setQualityCorrections)}
+              onAccept={() => acceptCorrections(qualityCorrections, setQualityCorrections, setQualityAccepted)}
               onDiscard={() => setQualityCorrections(null)}
             />
           </div>
@@ -1283,10 +1298,11 @@ function App() {
               result={methodologyResult}
               correcting={methodologyCorrecting}
               corrections={methodologyCorrections}
+              accepted={methodologyAccepted}
               error={methodologyError}
               setError={setMethodologyError}
               onCorrect={() => handleCorrectFromReview('Agent 3: Methodology', methodologyResult, setMethodologyCorrecting, setMethodologyCorrections, setMethodologyError)}
-              onAccept={() => acceptCorrections(methodologyCorrections, setMethodologyCorrections)}
+              onAccept={() => acceptCorrections(methodologyCorrections, setMethodologyCorrections, setMethodologyAccepted)}
               onDiscard={() => setMethodologyCorrections(null)}
             />
           </div>
@@ -1376,10 +1392,11 @@ function App() {
               result={consistencyResult}
               correcting={consistencyCorrecting}
               corrections={consistencyCorrections}
+              accepted={consistencyAccepted}
               error={consistencyError}
               setError={setConsistencyError}
               onCorrect={() => handleCorrectFromReview('Agent 4: Consistency', consistencyResult, setConsistencyCorrecting, setConsistencyCorrections, setConsistencyError)}
-              onAccept={() => acceptCorrections(consistencyCorrections, setConsistencyCorrections)}
+              onAccept={() => acceptCorrections(consistencyCorrections, setConsistencyCorrections, setConsistencyAccepted)}
               onDiscard={() => setConsistencyCorrections(null)}
             />
           </div>
@@ -1454,10 +1471,11 @@ function App() {
               result={csReviewResult}
               correcting={csReviewCorrecting}
               corrections={csReviewCorrections}
+              accepted={csReviewAccepted}
               error={csReviewError}
               setError={setCsReviewError}
               onCorrect={() => handleCorrectFromReview('Agent 5: CS Academic', csReviewResult, setCsReviewCorrecting, setCsReviewCorrections, setCsReviewError)}
-              onAccept={() => acceptCorrections(csReviewCorrections, setCsReviewCorrections)}
+              onAccept={() => acceptCorrections(csReviewCorrections, setCsReviewCorrections, setCsReviewAccepted)}
               onDiscard={() => setCsReviewCorrections(null)}
             />
           </div>
@@ -1525,10 +1543,11 @@ function App() {
               result={consolidationResult}
               correcting={consolidationCorrecting}
               corrections={consolidationCorrections}
+              accepted={consolidationAccepted}
               error={consolidationError}
               setError={setConsolidationError}
               onCorrect={() => handleCorrectFromReview('Final Consolidation', consolidationResult, setConsolidationCorrecting, setConsolidationCorrections, setConsolidationError)}
-              onAccept={() => acceptCorrections(consolidationCorrections, setConsolidationCorrections)}
+              onAccept={() => acceptCorrections(consolidationCorrections, setConsolidationCorrections, setConsolidationAccepted)}
               onDiscard={() => setConsolidationCorrections(null)}
             />
           </div>
@@ -2693,21 +2712,31 @@ function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize =
   );
 }
 
-function CorrectionPanel({ result, correcting, corrections, onCorrect, onAccept, onDiscard, error, setError }) {
+function CorrectionPanel({ result, correcting, corrections, accepted, onCorrect, onAccept, onDiscard, error, setError }) {
   if (!result) return null;
   return (
     <div className="correction-bar-wrap">
-      <button
-        className="secondary correction-trigger-btn"
-        type="button"
-        disabled={correcting}
-        onClick={onCorrect}
-      >
-        {correcting
-          ? <Loader2 className="spin" size={14} aria-hidden="true" />
-          : <Wand2 size={14} aria-hidden="true" />}
-        {correcting ? 'Generating corrections…' : 'Correct Proposal'}
-      </button>
+      {accepted ? (
+        <div className="correction-accepted-banner">
+          <CheckCircle2 size={15} aria-hidden="true" />
+          Corrections applied to proposal — review section updated
+          <button className="correction-accepted-redo" type="button" onClick={() => { setError(''); onCorrect(); }}>
+            Correct again
+          </button>
+        </div>
+      ) : (
+        <button
+          className="secondary correction-trigger-btn"
+          type="button"
+          disabled={correcting}
+          onClick={onCorrect}
+        >
+          {correcting
+            ? <Loader2 className="spin" size={14} aria-hidden="true" />
+            : <Wand2 size={14} aria-hidden="true" />}
+          {correcting ? 'Generating corrections…' : 'Correct Proposal'}
+        </button>
+      )}
 
       {error && <p className="error-banner correction-error">{error}</p>}
 

@@ -1664,6 +1664,40 @@ th {
   padding-top: 14px;
 }
 
+.correction-accepted-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1.5px solid #22c55e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.correction-accepted-banner svg {
+  flex-shrink: 0;
+  color: #22c55e;
+}
+
+.correction-accepted-redo {
+  margin-left: auto;
+  background: none;
+  border: 1px solid #86efac;
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #15803d;
+  cursor: pointer;
+}
+
+.correction-accepted-redo:hover {
+  background: #dcfce7;
+}
+
 .correction-trigger-btn {
   display: inline-flex;
   align-items: center;
