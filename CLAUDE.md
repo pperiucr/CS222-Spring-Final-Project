@@ -97,11 +97,14 @@ Each agent is an independent LLM call that appears as its own card below the Rev
 
 ### Correction workflow
 
-After any review agent produces results, a **"Correct Proposal"** button appears. Clicking it calls `POST /api/review/correct` → `correctFromReview(proposalOutput, agentName, feedback)`. The LLM returns `{ corrections: { field: revisedText }, explanation }` — only the fields the reviewer flagged. A correction preview panel then shows:
+After any review agent produces results, a **"Correct Proposal"** button appears. Clicking it calls `POST /api/review/correct` → `correctFromReview(proposalOutput, agentName, feedback)`. The LLM is instructed to revise **only the fields that specific agent flagged** (each agent targets different fields — see mock `MOCK_CORRECTIONS_BY_AGENT` in `claudeRefine.js`). It returns `{ corrections: { field: revisedText }, explanation }`. A correction preview panel then shows:
 - A brief explanation of the changes
 - Each corrected field with its revised text
-- **Accept Changes** — applies all corrections to `proposalOutput` via `updateOutput()`
+- **Accept Changes** — applies all corrections to `proposalOutput` via `updateOutput()`, then replaces the button with a green **"Corrections applied"** confirmation banner
 - **Discard** — clears the preview without saving
+- **Correct again** link in the banner — re-triggers correction without re-running the agent
+
+The `accepted` state resets to `false` when the agent's **Run Agent** button is clicked again.
 
 ### Export Actions bar
 
@@ -126,20 +129,33 @@ Detects provider from `LLM_PROVIDER` env var or by matching the URL against `gen
 
 ### claudeRefine.js mock mode
 
-`MOCK_LLM=true` short-circuits every exported function in `claudeRefine.js` to return a static `MOCK` object (hard-coded network-ops themed sample data). The `fetchDoiReference` function always tries CrossRef first regardless of `MOCK_LLM`. The `MOCK` object includes entries for all 6 review agents (`completeness`, `quality`, `methodology`, `consistency`, `csReview`, `consolidation`), the review dashboard (`review`), and the correction workflow (`corrections`, `methodologyText`).
+`MOCK_LLM=true` short-circuits every exported function in `claudeRefine.js` to return a static `MOCK` object (hard-coded network-ops themed sample data). The `fetchDoiReference` function always tries CrossRef first regardless of `MOCK_LLM`. The `MOCK` object includes entries for all 6 review agents (`completeness`, `quality`, `methodology`, `consistency`, `csReview`, `consolidation`), the review dashboard (`review`), the plain-text methodology generator (`methodologyText`), and six agent-specific correction objects (`correctionsCompleteness`, `correctionsQuality`, `correctionsMethodology`, `correctionsConsistency`, `correctionsCs`, `correctionsConsolidation`). The `MOCK_CORRECTIONS_BY_AGENT` map selects the right mock correction object based on the `agentName` string passed to `correctFromReview()`.
 
 ### Frontend state
 
 The main `App` component holds all state. Key state buckets:
 - `projectDetails` / `researchProblemData` / `methodologyData` / `timelineActivities` / `risksData` / `referencesData` — per-modal data
-- `proposalOutput` — flat object with 11 string fields that populate the "Research Proposal Draft" section
+- `proposalOutput` — flat object with 12 string/array fields that populate the "Research Proposal Draft" section: `research_title`, `objective`, `problem_statement`, `hypothesis`, `motivation`, `methodology_text`, `data_source`, `tools`, `contributions`, `timeline_budget` / `timeline_structured`, `risks_mitigation` / `risks_structured`, `references`
 - `completedSteps` — `{ projectDetails, researchProblem, methodology, timeline, risks, references }` booleans driving stepper appearance
 - `project` / `fieldSuggestions` / `decisions` — Path B (LLM suggestion workflow) state
 - `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API)
-- Per-agent state triplets: `[agent]Loading` / `[agent]Result` / `[agent]Error` for each of the 6 review agents
-- Per-agent correction state pairs: `[agent]Correcting` / `[agent]Corrections` for each of the 6 review agents
+- Per-agent state: `[agent]Loading` / `[agent]Result` / `[agent]Error` / `[agent]PromptOpen` / `[agent]Correcting` / `[agent]Corrections` / `[agent]Accepted` for each of the 6 review agents
 
 Workspace state (all Path A + Path B fields) is serialized to `localStorage` under `proposal-agent-final-project-memory-v1`. Auto-save fires on any change once the initial load completes.
+
+### PDF template (buildLatexFromOutput)
+
+`buildLatexFromOutput()` in `proposalGenerator.js` generates a styled LaTeX document matching the CS222 proposal format:
+- **Title block**: centered course header, large bold navy title (`#1B3A5C`), italic dept/university, author line, thick navy rule
+- **Section headings**: dark navy filled box with white section number + bold title (via `titlesec` + `\colorbox`)
+- **Sections in order**: Introduction & Objective → Problem Statement → Motivation → Hypothesis → Methodology → Expected Contributions → Timeline → Risks and Mitigation → References
+- **Hypothesis**: bulleted list; handles both newline-separated (`1. text`) and inline H-label (`H1: text H2: text`) formats via `hypothesisToItemize()`
+- **Methodology**: bulleted phases; detects Phase/Step/Stage markers, parenthesised numbers, newline-split, or sentence-split via `methodologyToItemize()`; prepends bold **Data Source:** line if present
+- **Risks**: nested bullets — `• Risk N [Category]: desc. Likelihood: X. Impact: Y.` with `◦ Mitigation:` sub-bullet, using `risks_structured` array if available
+- **Timeline**: full-width navy-header table from `timeline_structured` if available, else text
+- **References**: two-column table with navy-keyed citations
+- **Footer**: `CS 222 Spring 2026 — <title> — <author>` on every page
+- Packages used: `xcolor`, `colortbl`, `tabularx`, `booktabs`, `multicol`, `fancyhdr`, `parskip`, `titlesec`, `array`, `setspace`
 
 ### PDF compilation
 

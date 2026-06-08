@@ -16,12 +16,18 @@ Each step opens a modal form. Filling in and saving a step populates the corresp
 
 | Step | What You Fill In | LLM Helpers Available |
 |---|---|---|
-| 1. Project Details | Title, student/supervisor info, degree, research area, budget, objectives | Generate title and objective from a rough idea |
+| 1. Project Details | Title, student/supervisor info, degree program, research area, budget, objectives | Generate title and objective from a rough idea |
 | 2. Research Problem | Problem description, motivation, primary question, hypotheses | Enhance problem, generate motivation, suggest question and hypotheses |
-| 3. Methodology | Research type, data source, tools, experiment design, contributions | Generate full methodology paragraph |
+| 3. Methodology | Research type, data source, tools (tag input), experiment design, contributions | Generate full methodology (phase-based bullets in draft panel) |
 | 4. Timeline | Duration (weeks), team size, budget, activity list | Generate a distributed timeline |
-| 5. Risks & Mitigation | Risk category, description, likelihood, impact, mitigation | AI-structure a risk description, suggest a mitigation strategy |
+| 5. Risks & Mitigation | Risk category, description, likelihood, impact, mitigation (multiple risks) | AI-structure a risk description, suggest a mitigation strategy |
 | 6. References | DOI lookup (via CrossRef) or manual entry | CrossRef public API; LLM fallback if CrossRef fails |
+
+The **Research Proposal Draft** panel shows the following fields once each step is saved:
+- 1a. Research Title, 1b. Objective
+- 2a. Problem Statement, 2b. Hypothesis, 2c. Motivation (Primary Question not shown in draft)
+- 3a. Methodology, **3b. Data Source**, 3c. Tools, 3d. Expected Contributions
+- 4. Timeline, 5. Risks & Mitigation, 6. References
 
 **Secondary: LLM suggestion workflow**
 
@@ -63,7 +69,15 @@ Each agent is an independent LLM call. Run them in any order after the review da
 
 **Correct Proposal + Accept / Discard**
 
-After any agent produces results, a **"Correct Proposal"** button appears. Clicking it sends the review feedback to the LLM, which generates revised text for only the affected proposal fields. A correction preview panel shows each revised field; **Accept Changes** applies them to the draft, **Discard** clears the preview without saving.
+After any agent produces results, a **"Correct Proposal"** button appears. Each agent's corrections target only the fields that agent is responsible for:
+- Completeness Reviewer → objective, hypothesis
+- Research Quality Reviewer → problem statement, contributions
+- Methodology Reviewer → methodology text
+- Consistency Reviewer → objective, timeline
+- CS Academic Reviewer → problem statement, hypothesis
+- Consolidation Agent → problem statement, methodology text, contributions
+
+Clicking "Correct Proposal" sends the specific agent's feedback to the LLM, which generates revised text only for those fields. A correction preview panel shows each revised field; **Accept Changes** applies them to the draft, **Discard** clears the preview without saving. After accepting, a green **"Corrections applied to proposal"** banner replaces the button, with a "Correct again" link to re-run if needed. Re-running any agent resets the accepted state.
 
 ---
 
@@ -73,7 +87,18 @@ A centered action bar below the Final Consolidation Agent provides:
 
 - **LaTeX** — downloads the assembled `.tex` source file
 - **PDF** — opens a live preview popup and compiles via Tectonic, with download buttons for both PDF and LaTeX
-- **Review Checklist** — modal summarising 6-step completion status and all 11 proposal field statuses
+- **Review Checklist** — modal summarising 6-step completion status and all proposal field statuses
+
+**PDF format:** The generated document uses a styled template matching the CS222 proposal format:
+- Dark navy (`#1B3A5C`) title block with course header, bold title, and author line
+- Navy-boxed section headings with white text
+- **Hypothesis** rendered as a bulleted list (H1/H2/H3 labels stripped)
+- **Problem Statement** and **Motivation** as separate sections
+- **Methodology** as bulleted phases (Phase/Step/Stage markers bolded), preceded by a **Data Source** line
+- **Risks & Mitigation** as nested bullets: `• Risk N [Category]: desc. Likelihood/Impact.` with `◦ Mitigation:` sub-bullet
+- **Timeline** as a full-width navy-header table
+- **References** as a two-column table with navy citation keys
+- Footer on every page: `CS 222 Spring 2026 — <title> — <author>`
 
 ---
 
@@ -105,7 +130,7 @@ LLM_MODEL=gemini-2.5-flash
 
 Without `LLM_API_KEY` and `LLM_MODEL` the app runs in local-fallback mode — all proposal generation uses deterministic templates and no API calls are made.
 
-Set `MOCK_LLM=true` to short-circuit the per-section modal helpers and all review agent API calls with hard-coded sample responses. Useful for UI development without an API key.
+Set `MOCK_LLM=true` to short-circuit the per-section modal helpers and all review agent API calls with hard-coded sample responses. Each review agent's "Correct Proposal" action also returns agent-specific mock corrections targeting only that agent's fields. Useful for UI development without an API key.
 
 ## PDF Generation Requirement
 
@@ -119,9 +144,9 @@ Install Tectonic: https://tectonic-typesetting.github.io/
 
 1. Open the app and click **Project Details** (step 1). Fill in your research title, student info, and objectives. Use "LLM Generate" to draft a title and objective from a rough idea. Click Save.
 2. Click **Research Problem** (step 2). Describe the problem, then use the AI buttons to enhance it, generate a motivation paragraph, and suggest a research question and hypotheses. Click Save.
-3. Click **Methodology** (step 3). Select a research type, describe your data source, add tools as tags, and describe the experiment. Click "Generate Methodology" to produce a paragraph. Add expected contributions. Click Save.
+3. Click **Methodology** (step 3). Select a research type, fill in the data source field, add tools as tags, and describe the experiment. Click "Generate Methodology" to produce a phase-based methodology. Add expected contributions. Click Save. The draft panel shows Data Source (3b) alongside the methodology.
 4. Click **Timeline** (step 4). Set the duration in weeks and list your activities. Use "Generate Timeline" to distribute activities across the duration. Click Save.
-5. Click **Risks & Mitigation** (step 5). Add one or more risks with category, description, likelihood, and impact. Use "AI Structure Risk" and "AI Suggest Mitigation" to refine each entry. Click Save.
+5. Click **Risks & Mitigation** (step 5). Add one or more risks — each with category, description, likelihood, impact, and mitigation. Use "AI Structure Risk" and "AI Suggest Mitigation" to refine each entry. Multiple risks can be added and saved to the list. Click Save. Risks appear in the draft as nested bullets with mitigation sub-bullets.
 6. Click **References** (step 6). Enter a DOI and click "Fetch" to auto-populate a formatted citation from CrossRef, or type one manually. Add as many references as needed. Click Save.
 7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly inline.
 8. Click **Save** in the Workspace Memory bar to persist all draft state to localStorage.
@@ -131,7 +156,7 @@ Install Tectonic: https://tectonic-typesetting.github.io/
 9. Click **Review Proposal** in the Review Dashboard. Scores appear instantly — no API call needed.
 10. Click **View Issues** to see which fields need attention, or **Auto Fix** to let the LLM patch flagged fields automatically.
 11. Run each review agent (Completeness → Research Quality → Methodology → Consistency → CS Academic) using its **Run Agent** button. Read the structured feedback in each card.
-12. For any agent with issues, click **Correct Proposal** to have the LLM generate targeted revisions. Review the correction preview and click **Accept Changes** to apply them, or **Discard** to ignore.
+12. For any agent with issues, click **Correct Proposal** to have the LLM generate targeted revisions for only that agent's fields. Review the correction preview and click **Accept Changes** to apply them — a green "Corrections applied" banner confirms success with a "Correct again" option. Click **Discard** to ignore without saving.
 13. Once all agents have run, click **Run Consolidation** in the Final Consolidation Agent to get a unified, prioritised Top 5 improvement list. Apply corrections from here as well if desired.
 
 ### Exporting
