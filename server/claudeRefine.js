@@ -840,22 +840,23 @@ export async function autoFixField(field, content, issue) {
   return String(parsed.improved || content).trim();
 }
 
-const CORRECTION_SYSTEM_PROMPT = `You are a research proposal editor. You receive a research proposal and a structured review report from ONE specific review agent. Your task is to revise ONLY the proposal fields that the review report explicitly identifies as problematic.
+const CORRECTION_SYSTEM_PROMPT = `You are a research proposal editor making minimal, targeted corrections based on a review report.
 
 Rules:
-- Read the review report carefully. Identify which sections it criticises or flags.
-- Only revise fields directly addressed by that agent's findings. Do NOT touch fields the agent did not mention.
-- Each revised field must be a complete, self-contained replacement — not a partial edit.
-- Incorporate the agent's specific suggestions, recommendations, and required additions.
-- Academic tone, clear and concise.
+- Only correct fields the review report explicitly flags. Do NOT touch other fields.
+- Make the smallest edit that fixes the flagged issue. Do NOT rewrite, expand, or restructure.
+- Preserve the exact format and structure of the original field: if it uses numbered phases keep those phases, if it uses plain sentences keep plain sentences.
+- Keep the revised text within 10% of the original length — do not add new sentences, phases, or sections.
+- Do NOT use markdown, bullet symbols (•, -, *), asterisks, LaTeX commands, or any special formatting. Plain text only.
+- Fix only what the reviewer specifically criticised — one concrete tweak per field.
 - Valid field names: research_title, objective, problem_statement, hypothesis, motivation, methodology_text, tools, contributions, timeline, risks, references
 
 Return strict JSON:
 {
   "corrections": {
-    "<field_name>": "<full revised text>"
+    "<field_name>": "<minimally corrected text — same format and approximate length as original>"
   },
-  "explanation": "<1-2 sentences summarising which agent's issues were addressed and what changed>"
+  "explanation": "<1 sentence: which field was changed and what specific issue was fixed>"
 }`;
 
 const MOCK_CORRECTIONS_BY_AGENT = {
