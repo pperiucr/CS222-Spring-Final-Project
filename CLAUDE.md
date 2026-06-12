@@ -81,17 +81,16 @@ The dashboard shows:
 - "View Issues" — lists detected field-level issues
 - "Auto Fix" — calls `POST /api/review/auto-fix` → `autoFixField()` to patch fields inline
 
-Scores **auto-update** whenever corrections are accepted from any review agent — `acceptCorrections()` merges the new output and immediately re-runs `computeReviewScores`.
+Scores **auto-update** whenever a per-issue fix is accepted — `applyFix()` merges the corrected fields and immediately re-runs `computeReviewScores`.
 
 ### 6 Review Agents
 
 Each agent is an independent LLM call that appears as its own card below the Review Dashboard. All agents call `POST /api/review/<name>` → the corresponding function in `claudeRefine.js`. Each agent section includes:
 - A **Run Agent** button (or **Run Consolidation** for the Final agent)
 - A collapsible **Prompt** panel showing the exact system prompt
-- Structured results rendered with agent-specific UI
-- A **Correct Proposal** button that appears once results are available
+- Structured results rendered with agent-specific UI, with a **Fix** button on every issue/suggestion card
 
-After accepting corrections, the agent's results panel **collapses** and a green **"Review complete"** badge appears next to the reviewer title. Re-running the agent resets this state.
+The green **"Review complete"** badge appears next to the reviewer title as soon as the agent run succeeds. Re-running the agent resets the badge until the new run completes.
 
 | # | Agent | Route | What It Checks |
 |---|---|---|---|
@@ -102,16 +101,17 @@ After accepting corrections, the agent's results panel **collapses** and a green
 | 5 | CS Academic Reviewer | `POST /api/review/cs-academic` | Technical Clarity, Research Gap Articulation, Methodology Completeness, Problem–Method Alignment, Academic Writing Quality, CS Research Standards |
 | Final | Consolidation Agent | `POST /api/review/consolidate` | Aggregates all prior agent reports, removes duplicates, outputs Top 5 prioritised improvements |
 
-### Correction workflow
+### Per-issue Fix workflow
 
-After any review agent produces results, a **"Correct Proposal"** button appears. Clicking it calls `POST /api/review/correct` → `correctFromReview(proposalOutput, agentName, feedback)`. The LLM is instructed to revise **only the fields that specific agent flagged** (each agent targets different fields — see mock `MOCK_CORRECTIONS_BY_AGENT` in `claudeRefine.js`). It returns `{ corrections: { field: revisedText }, explanation }`. A correction preview panel then shows:
-- A brief explanation of the changes
-- Each corrected field with its revised text
-- **Accept Changes** — applies all corrections to `proposalOutput` via `updateOutput()`, then replaces the button with a green **"Corrections applied"** confirmation banner
+Every issue/suggestion card has an inline **Fix** button. Clicking it calls `POST /api/review/correct` → `correctFromReview(proposalOutput, agentName, { issue: issueText })` with just that item's text as feedback. The LLM returns `{ corrections: { field: revisedText }, explanation }` targeting only the field(s) relevant to that specific issue. An inline preview appears showing:
+- A one-sentence explanation of what changed
+- Each revised field with its new text
+- **Accept Changes** — applies only those corrections to `proposalOutput` via `updateOutput()` and refreshes `computeReviewScores`; the button turns into a green **Fixed** badge
 - **Discard** — clears the preview without saving
-- **Correct again** link in the banner — re-triggers correction without re-running the agent
 
-The `accepted` state resets to `false` when the agent's **Run Agent** button is clicked again.
+Fix and Accept are optional — running the agent is sufficient to mark the review complete. `applyFix(correctionFields, setAgentAccepted)` is the shared helper that applies corrections and re-runs scoring. `MOCK_CORRECTIONS_BY_AGENT` in `claudeRefine.js` provides per-agent mock corrections keyed by agent name.
+
+The per-agent `[agent]Accepted` state is set to `true` when the run succeeds and reset to `false` when Run Agent is clicked again.
 
 ### Export Actions bar
 
@@ -124,7 +124,7 @@ Centered row of three buttons below the Final Consolidation Agent:
 
 | File | Role |
 |---|---|
-| `src/App.jsx` | Entire frontend — all state, 6 modal components, `ProposalStepper`, `GenerateFormatPopup`, `CorrectionPanel`, and the main App component. No sub-files. |
+| `src/App.jsx` | Entire frontend — all state, 6 modal components, `ProposalStepper`, `GenerateFormatPopup`, `FixButton`, `CorrectionPanel` (retained but unused in JSX), and the main App component. No sub-files. |
 | `server/index.js` | Express server; 28 API routes covering agent workflow, all 6 stepper section helpers, DOI lookup, LaTeX assembly, PDF export, 6 review agents, auto-fix, and proposal correction |
 | `server/proposalGenerator.js` | `startAgentSession`, `answerAgentQuestion`, `generateProposal`, `buildLatexFromOutput`; provider routing (Gemini vs OpenAI-compatible); deterministic local fallback when `LLM_API_KEY` or `LLM_MODEL` is absent |
 | `server/claudeRefine.js` | All per-section LLM helpers called by the 6-step modal popups, all 6 review agent functions, `autoFixField`, and `correctFromReview`; respects `MOCK_LLM=true`; `fetchDoiReference` hits CrossRef first |
@@ -144,7 +144,7 @@ The main `App` component holds all state. Key state buckets:
 - `projectDetails` / `researchProblemData` / `methodologyData` / `timelineActivities` / `risksData` / `referencesData` — per-modal data. `timelineActivities` starts as `[]`; `defaultActivitiesForDuration(weeks)` generates the initial list client-side when the modal opens with no saved data.
 - `proposalOutput` — flat object with 12 string/array fields that populate the "Research Proposal Draft" section: `research_title`, `objective`, `problem_statement`, `hypothesis`, `motivation`, `methodology_text`, `data_source`, `tools`, `contributions`, `timeline_budget` / `timeline_structured`, `risks_mitigation` / `risks_structured`, `references`. The proposal title heading above the draft reads `proposalOutput.research_title` first (inline-editable), falling back to `projectDetails.research_title` (set via the modal).
 - `completedSteps` — `{ projectDetails, researchProblem, methodology, timeline, risks, references }` booleans driving stepper appearance
-- `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API); auto-refreshed when corrections are accepted
+- `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API); auto-refreshed whenever `applyFix` applies a correction
 - `confirmDialog` — `{ action, message }` or `null`; drives the Save/Reload/Clear confirmation popup
 - Per-agent state: `[agent]Loading` / `[agent]Result` / `[agent]Error` / `[agent]PromptOpen` / `[agent]Correcting` / `[agent]Corrections` / `[agent]Accepted` for each of the 6 review agents
 

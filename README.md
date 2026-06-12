@@ -53,11 +53,11 @@ After filling in the draft, click **Review Proposal** to run a client-side analy
 | Writing Quality | Are sentences complete and professional in length? |
 | Consistency | Do title keywords appear in the problem statement? |
 
-**View Issues** lists field-level problems. **Auto Fix** calls the LLM to patch flagged fields in place. Scores **automatically refresh** whenever corrections are accepted from any review agent.
+**View Issues** lists field-level problems. **Auto Fix** calls the LLM to patch flagged fields in place. Scores **automatically refresh** whenever a per-issue fix is accepted.
 
 **5 Specialist Review Agents + 1 Consolidation Agent**
 
-Each agent is an independent LLM call. Run them in any order after the review dashboard.
+Each agent is an independent LLM call. Run them in any order after the review dashboard. A green **"Review complete"** badge appears next to the agent title as soon as a run succeeds. Re-running the agent clears and resets the badge.
 
 | Agent | What It Checks | Output |
 |---|---|---|
@@ -68,22 +68,11 @@ Each agent is an independent LLM call. Run them in any order after the review da
 | 5 — CS Academic Reviewer | Technical Clarity, Research Gap Articulation, Methodology Completeness, Problem–Method Alignment, Academic Writing Quality, CS Research Standards | Overall score (0–100), dimension scores, major recommendations |
 | Final — Consolidation Agent | All prior agent reports combined | Top 5 prioritised improvements, deduped across agents |
 
-**Correct Proposal + Accept / Discard**
+**Per-issue Fix + Accept / Discard (optional)**
 
-After any agent produces results, a **"Correct Proposal"** button appears. Each agent's corrections target only the fields that agent is responsible for:
-- Completeness Reviewer → objective, hypothesis
-- Research Quality Reviewer → problem statement, contributions
-- Methodology Reviewer → methodology text
-- Consistency Reviewer → objective, timeline
-- CS Academic Reviewer → problem statement, hypothesis
-- Consolidation Agent → problem statement, methodology text, contributions
+Every issue, suggestion, and improvement card has a **Fix** button. Clicking it sends just that item's text to the LLM (`POST /api/review/correct`), which returns a targeted correction for the relevant proposal field(s). An inline preview appears showing the revised text; **Accept Changes** applies only that fix to the draft and refreshes the Review Dashboard scores — the button becomes a green **Fixed** badge. **Discard** clears the preview without saving.
 
-Clicking "Correct Proposal" sends the specific agent's feedback to the LLM, which generates revised text only for those fields. A correction preview panel shows each revised field; **Accept Changes** applies them to the draft, **Discard** clears the preview without saving. After accepting:
-- A green **"Corrections applied to proposal"** banner replaces the button, with a "Correct again" link to re-run if needed.
-- The agent's results panel **collapses** and a green **"Review complete"** badge appears next to the reviewer title.
-- The Review Dashboard scores **update automatically** to reflect the corrected fields.
-
-Re-running any agent resets the accepted state and restores full results view.
+Fix is entirely optional — the "Review complete" badge appears as soon as the agent run completes, regardless of whether any fixes are accepted.
 
 ---
 
@@ -136,7 +125,7 @@ LLM_MODEL=gemini-2.5-flash
 
 Without `LLM_API_KEY` and `LLM_MODEL` the app runs in local-fallback mode — all proposal generation uses deterministic templates and no API calls are made.
 
-Set `MOCK_LLM=true` to short-circuit the per-section modal helpers and all review agent API calls with hard-coded sample responses. Each review agent's "Correct Proposal" action also returns agent-specific mock corrections targeting only that agent's fields. Useful for UI development without an API key.
+Set `MOCK_LLM=true` to short-circuit the per-section modal helpers and all review agent API calls with hard-coded sample responses. Each per-issue **Fix** action also returns agent-specific mock corrections. Useful for UI development without an API key.
 
 ## PDF Generation Requirement
 
@@ -162,8 +151,8 @@ Install Tectonic: https://tectonic-typesetting.github.io/
 9. Click **Review Proposal** in the Review Dashboard. Scores appear instantly — no API call needed.
 10. Click **View Issues** to see which fields need attention, or **Auto Fix** to let the LLM patch flagged fields automatically.
 11. Run each review agent (Completeness → Research Quality → Methodology → Consistency → CS Academic) using its **Run Agent** button. Read the structured feedback in each card.
-12. For any agent with issues, click **Correct Proposal** to have the LLM generate targeted revisions for only that agent's fields. Review the correction preview and click **Accept Changes** to apply them — the agent collapses, a green "Review complete" badge appears next to its title, the "Corrections applied" banner confirms the changes, and the Review Dashboard scores update automatically. Click **Discard** to ignore without saving.
-13. Once all agents have run, click **Run Consolidation** in the Final Consolidation Agent to get a unified, prioritised Top 5 improvement list. Apply corrections from here as well if desired.
+12. For any agent with issues, click **Fix** next to a specific issue or suggestion to have the LLM generate a targeted correction for just that item. Review the inline preview and click **Accept Changes** to apply it — only that fix's fields are updated, and the Review Dashboard scores refresh automatically. Click **Discard** to ignore. The green **"Review complete"** badge appears as soon as the agent run completes; fixing issues is optional.
+13. Once all agents have run, click **Run Consolidation** in the Final Consolidation Agent to get a unified, prioritised Top 5 improvement list. Use the **Fix** button on individual improvements if desired.
 
 ### Exporting
 
