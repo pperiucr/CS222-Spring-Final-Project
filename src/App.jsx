@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BotMessageSquare,
   CheckCircle2,
@@ -9,6 +9,7 @@ import {
   Download,
   FileText,
   FolderOpen,
+  ImagePlus,
   ListChecks,
   Loader2,
   Play,
@@ -265,6 +266,7 @@ function App() {
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [projectDetails, setProjectDetails] = useState(EMPTY_PROJECT_DETAILS);
   const [researchProblemOpen, setResearchProblemOpen] = useState(false);
+  const [designOpen, setDesignOpen] = useState(false);
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [risksOpen, setRisksOpen] = useState(false);
@@ -272,6 +274,7 @@ function App() {
 
   const EMPTY_RESEARCH_PROBLEM_DATA = { problem_description: '', motivation: '', primary_question: '', hypotheses: [''] };
   const [researchProblemData, setResearchProblemData] = useState(EMPTY_RESEARCH_PROBLEM_DATA);
+  const [designData, setDesignData] = useState(null);
   const [methodologyData, setMethodologyData] = useState(null);
   const [timelineActivities, setTimelineActivities] = useState([]);
   const [risksData, setRisksData] = useState({ savedRisks: [] });
@@ -326,7 +329,7 @@ function App() {
   const [exportLatexLoading, setExportLatexLoading] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState({
-    projectDetails: false, researchProblem: false, methodology: false,
+    projectDetails: false, researchProblem: false, design: false, methodology: false,
     timeline: false, risks: false, references: false
   });
 
@@ -336,6 +339,7 @@ function App() {
 
   const [proposalOutput, setProposalOutput] = useState({
     research_title: '', objective: '', problem_statement: '', hypothesis: '', motivation: '',
+    design_description: '', design_image: null, design_image_caption: 'System Architecture Review',
     methodology_text: '', tools: '', contributions: '',
     timeline_budget: '', timeline_structured: null, risks_mitigation: '', references: ''
   });
@@ -549,6 +553,7 @@ function App() {
     completedSteps,
     projectDetails,
     researchProblemData,
+    designData,
     methodologyData,
     timelineActivities,
     risksData,
@@ -823,6 +828,7 @@ function App() {
       completedSteps,
       projectDetails,
       researchProblemData,
+      designData,
       methodologyData,
       timelineActivities,
       risksData,
@@ -863,6 +869,7 @@ function App() {
       if (snapshot.completedSteps)     setCompletedSteps((prev) => ({ ...prev, ...snapshot.completedSteps }));
       if (snapshot.projectDetails)     setProjectDetails((prev) => ({ ...prev, ...snapshot.projectDetails }));
       if (snapshot.researchProblemData) setResearchProblemData(snapshot.researchProblemData);
+      if (snapshot.designData)          setDesignData(snapshot.designData);
       if (snapshot.methodologyData)    setMethodologyData(snapshot.methodologyData);
       if (snapshot.timelineActivities && Array.isArray(snapshot.timelineActivities)) setTimelineActivities(snapshot.timelineActivities);
       if (snapshot.risksData)          setRisksData(snapshot.risksData);
@@ -903,12 +910,14 @@ function App() {
   function clearDraft() {
     setProposalOutput({
       research_title: '', objective: '', problem_statement: '', hypothesis: '', motivation: '',
+      design_description: '', design_image: null, design_image_caption: 'System Architecture Review',
       methodology_text: '', data_source: '', tools: '', contributions: '',
       timeline_budget: '', timeline_structured: null, risks_mitigation: '', risks_structured: [], references: ''
     });
-    setCompletedSteps({ projectDetails: false, researchProblem: false, methodology: false, timeline: false, risks: false, references: false });
+    setCompletedSteps({ projectDetails: false, researchProblem: false, design: false, methodology: false, timeline: false, risks: false, references: false });
     setProjectDetails(EMPTY_PROJECT_DETAILS);
     setResearchProblemData({ problem_description: '', motivation: '', primary_question: '', hypotheses: [''] });
+    setDesignData(null);
     setMethodologyData(null);
     setTimelineActivities([]);
     setRisksData({ savedRisks: [] });
@@ -935,6 +944,7 @@ function App() {
             onOpen={(key) => {
               if (key === 'projectDetails') setProjectDetailsOpen(true);
               if (key === 'researchProblem') setResearchProblemOpen(true);
+              if (key === 'design') setDesignOpen(true);
               if (key === 'methodology') setMethodologyOpen(true);
               if (key === 'timeline') setTimelineOpen(true);
               if (key === 'risks') setRisksOpen(true);
@@ -964,14 +974,15 @@ function App() {
                 { label: '1b. Objective',              key: 'objective',        full: false },
                 { label: '2a. Problem Statement',       key: 'problem_statement', full: false },
                 { label: '2b. Hypothesis',             key: 'hypothesis',        full: false },
-                { label: '2c. Motivation',             key: 'motivation',        full: true  },
-                { label: '3a. Methodology',            key: 'methodology_text', full: true  },
-                { label: '3b. Data Source',            key: 'data_source',      full: false },
-                { label: '3c. Tools',                  key: 'tools',            full: false },
-                { label: '3d. Contributions',          key: 'contributions',    full: false },
-                { label: '4. Timeline',                key: 'timeline_budget',  full: true  },
-                { label: '5. Risks and Mitigation',    key: 'risks_mitigation', full: true  },
-                { label: '6. References',              key: 'references',       full: true  },
+                { label: '2c. Motivation',             key: 'motivation',          full: true  },
+                { label: '3. System Design',           key: 'design_description',  full: true  },
+                { label: '4a. Methodology',            key: 'methodology_text',    full: true  },
+                { label: '4b. Data Source',            key: 'data_source',      full: false },
+                { label: '4c. Tools',                  key: 'tools',            full: false },
+                { label: '4d. Contributions',          key: 'contributions',    full: false },
+                { label: '5. Timeline',                key: 'timeline_budget',  full: true  },
+                { label: '6. Risks and Mitigation',    key: 'risks_mitigation', full: true  },
+                { label: '7. References',              key: 'references',       full: true  },
               ].map(({ label, key, full }) => (
                 <label key={key} className={`proposal-output-field${full ? ' full-width' : ''}`}>
                   <span className="proposal-output-label">{label}</span>
@@ -1570,10 +1581,11 @@ function App() {
                 </div>
 
                 <div className="checklist-group">
-                  <h3 className="checklist-group-title">6-Step Stepper</h3>
+                  <h3 className="checklist-group-title">7-Step Stepper</h3>
                   {[
                     ['projectDetails',  'Project Details'],
                     ['researchProblem', 'Research Problem'],
+                    ['design',          'Design'],
                     ['methodology',     'Methodology'],
                     ['timeline',        'Timeline'],
                     ['risks',           'Risks & Mitigation'],
@@ -1593,7 +1605,8 @@ function App() {
                     ['objective',         'Objective'],
                     ['problem_statement', 'Problem Statement'],
                     ['hypothesis',        'Hypothesis'],
-                    ['motivation',        'Motivation'],
+                    ['motivation',          'Motivation'],
+                    ['design_description', 'System Design'],
                     ['methodology_text',  'Methodology'],
                     ['tools',             'Tools'],
                     ['contributions',     'Contributions'],
@@ -1649,6 +1662,22 @@ function App() {
                 setResearchProblemOpen(false);
               }}
               onClose={() => setResearchProblemOpen(false)}
+            />
+          )}
+          {designOpen && (
+            <DesignModal
+              initialData={designData}
+              onSave={(data) => {
+                setDesignData(data);
+                updateOutput({
+                  design_description: data.description || '',
+                  design_image: data.design_image || null,
+                  design_image_caption: data.design_image_caption || 'System Architecture Review'
+                });
+                markComplete('design');
+                setDesignOpen(false);
+              }}
+              onClose={() => setDesignOpen(false)}
             />
           )}
           {methodologyOpen && (
@@ -1903,10 +1932,12 @@ function GenerateFormatPopup({ proposalOutput, projectDetails, onClose }) {
     try {
       const { proposalLatex } = await postJson('/api/generate-from-output', { ...proposalOutput, projectDetails });
       setLatex(proposalLatex);
+      const pdfPayload = { proposalLatex, title: proposalOutput.research_title || 'proposal' };
+      if (proposalOutput.design_image) pdfPayload.images = { 'design-figure.png': proposalOutput.design_image };
       const pdfResponse = await fetch('/api/export/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proposalLatex, title: proposalOutput.research_title || 'proposal' })
+        body: JSON.stringify(pdfPayload)
       });
       if (pdfResponse.ok) {
         const blob = await pdfResponse.blob();
@@ -1993,10 +2024,11 @@ function GenerateFormatPopup({ proposalOutput, projectDetails, onClose }) {
 const PROPOSAL_STEPS = [
   { key: 'projectDetails',   number: 1, label: 'Project Details',             hint: 'Research title, student info, objectives' },
   { key: 'researchProblem',  number: 2, label: 'Research Problem',            hint: 'Problem statement, questions, hypotheses' },
-  { key: 'methodology',      number: 3, label: 'Methodology',                 hint: 'Research type, tools, experiment design' },
-  { key: 'timeline',         number: 4, label: 'Timeline',                    hint: 'Duration and research activities' },
-  { key: 'risks',            number: 5, label: 'Risks & Mitigation',          hint: 'Identify and mitigate project risks' },
-  { key: 'references',       number: 6, label: 'References',                  hint: 'Citations in APA, IEEE or ACM format' },
+  { key: 'design',           number: 3, label: 'Design',                      hint: 'System design diagram and description' },
+  { key: 'methodology',      number: 4, label: 'Methodology',                 hint: 'Research type, tools, experiment design' },
+  { key: 'timeline',         number: 5, label: 'Timeline',                    hint: 'Duration and research activities' },
+  { key: 'risks',            number: 6, label: 'Risks & Mitigation',          hint: 'Identify and mitigate project risks' },
+  { key: 'references',       number: 7, label: 'References',                  hint: 'Citations in APA, IEEE or ACM format' },
 ];
 
 function ProposalStepper({ completed, onOpen }) {
@@ -2785,6 +2817,7 @@ function MethodologyModal({ onSave, onClose, initialData }) {
               </div>
             ))}
           </div>
+
         </div>
 
         <div className="modal-footer">
@@ -2796,6 +2829,141 @@ function MethodologyModal({ onSave, onClose, initialData }) {
               : form;
             onSave(finalForm);
           }}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const EMPTY_DESIGN = { description: '', design_image: null, design_image_caption: 'System Architecture Review' };
+
+function DesignModal({ onSave, onClose, initialData }) {
+  const [form, setForm] = useState({ ...EMPTY_DESIGN, ...(initialData || {}) });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const imageInputRef = useRef(null);
+
+  function setField(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function handleEnhance() {
+    if (!form.description.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const data = await postJson('/api/research/enhance-design', { description: form.description });
+      setField('description', data.description || form.description);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="Design">
+        <div className="modal-header">
+          <h2>System Design</h2>
+          <button className="secondary icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && <p className="error-banner">{error}</p>}
+
+          <label>
+            Design Description
+            <textarea
+              value={form.description}
+              onChange={(e) => setField('description', e.target.value)}
+              placeholder="Describe your system architecture, design approach, or key components..."
+              style={{ minHeight: '130px' }}
+            />
+          </label>
+
+          <button
+            className="llm-help-button"
+            type="button"
+            disabled={!form.description.trim() || busy}
+            onClick={handleEnhance}
+          >
+            {busy ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
+            Enhance with AI
+          </button>
+
+          <hr className="rp-divider" />
+
+          <div className="modal-field-group">
+            <div className="modal-objectives-header">
+              <span className="modal-field-label">Design Diagram</span>
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <ImagePlus size={15} aria-hidden="true" />
+                {form.design_image ? 'Replace Image' : 'Upload Image'}
+              </button>
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                  setField('design_image', evt.target.result);
+                  if (!form.design_image_caption.trim()) setField('design_image_caption', 'System Architecture Review');
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }}
+            />
+            {form.design_image && (
+              <div className="design-image-preview">
+                <div className="design-image-frame">
+                  <img
+                    src={form.design_image}
+                    alt="Design diagram"
+                    style={{ maxWidth: '100%', maxHeight: '280px', borderRadius: '6px', display: 'block' }}
+                  />
+                  <button
+                    className="secondary icon-button design-image-remove"
+                    type="button"
+                    onClick={() => { setField('design_image', null); setField('design_image_caption', ''); }}
+                    aria-label="Remove image"
+                    title="Remove image"
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                </div>
+                <label style={{ marginTop: '8px', display: 'block' }}>
+                  Figure Caption
+                  <input
+                    value={form.design_image_caption}
+                    onChange={(e) => setField('design_image_caption', e.target.value)}
+                    placeholder="e.g. System architecture overview"
+                  />
+                </label>
+              </div>
+            )}
+            {!form.design_image && (
+              <p style={{ fontSize: '0.82rem', color: '#888', marginTop: '6px' }}>
+                Upload a JPEG, PNG, or other image of your system design, architecture diagram, or workflow figure. It will appear in the proposal document before the Methodology section.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="primary" type="button" onClick={() => onSave(form)}>Save</button>
         </div>
       </div>
     </div>

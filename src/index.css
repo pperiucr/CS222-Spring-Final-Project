@@ -1102,6 +1102,38 @@ th {
   margin: 4px 0;
 }
 
+/* Design image preview in Methodology modal */
+.design-image-preview {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.design-image-frame {
+  position: relative;
+  display: inline-block;
+  align-self: flex-start;
+  border: 1.5px solid #c8d9e6;
+  border-radius: 8px;
+  padding: 6px;
+  background: #f5fafe;
+}
+
+.design-image-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255,255,255,0.9) !important;
+  border: 1px solid #ccc !important;
+  border-radius: 50% !important;
+  padding: 2px !important;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Generate Proposal Preview Popup */
 .gen-preview-overlay {
   padding: 16px;

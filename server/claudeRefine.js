@@ -6,6 +6,7 @@ const MOCK = {
     introduction: 'This research aims to design and evaluate an NLP-driven agent framework for automating network operations tasks. The proposed system will interpret natural language commands, map them to network control actions, and reduce manual intervention in complex infrastructure management. The work addresses a critical gap between human-expressed operational intent and machine-executable network policies.'
   },
   problemStatement: 'Modern network operations require skilled engineers to interpret alerts, diagnose faults, and execute remediation steps manually, leading to slow response times and human error. Existing automation tools lack the ability to understand high-level natural language intent and translate it into precise, context-aware network actions. This research proposes an NLP-driven agent that bridges the gap between natural language operational commands and automated network control.',
+  designDescription: 'The proposed system adopts a modular pipeline architecture comprising three primary layers: a natural language processing (NLP) front-end for command interpretation, a semantic reasoning engine for intent mapping, and a network control back-end for action execution. The NLP layer employs a fine-tuned transformer model to parse operator commands into structured intent representations. The reasoning engine applies retrieval-augmented generation (RAG) over a topology knowledge base to resolve ambiguities and generate context-aware control plans. The control back-end translates validated plans into device-specific configuration instructions via a standardised API abstraction layer, ensuring reproducibility across heterogeneous network environments.',
   enhancedProblem: 'Contemporary network operations centers (NOCs) face a critical scalability challenge: the volume and complexity of network events far exceeds the capacity of human operators to respond in real time. Current rule-based automation systems are brittle and cannot interpret the nuanced, context-dependent intent expressed in natural language by network engineers. This research addresses the fundamental problem of translating free-form operational commands into precise, verifiable network control actions.',
   motivation: 'Network infrastructure underpins every digital service, yet its management remains largely manual and error-prone. As networks grow in scale and complexity, the gap between human cognitive capacity and operational demands widens. An NLP-driven agent can dramatically reduce mean-time-to-resolution for network incidents, lower operational costs, and enable smaller teams to manage larger, more complex infrastructures — directly impacting service reliability and business continuity.',
   primaryQuestion: 'How can a large language model-based agent accurately interpret natural language network operation commands and execute them with measurable reliability across heterogeneous network environments?',
@@ -382,6 +383,14 @@ export async function enhanceProblemStatement(problemDescription) {
   return callGemini(
     `You are a research proposal expert. Enhance the given research problem description to be clear, specific, and academically rigorous. Keep it 3-5 sentences. Return only the enhanced text, nothing else.`,
     `Research problem: ${problemDescription}`
+  );
+}
+
+export async function enhanceDesignDescription(description) {
+  if (IS_MOCK) return MOCK.designDescription;
+  return callGemini(
+    `You are a research proposal expert. Enhance the following system or research design description to be technically precise, well-structured, and academically rigorous. Describe the key components, architecture, or workflow clearly in 4-6 sentences. Return only the enhanced text, nothing else.`,
+    `Design description: ${description}`
   );
 }
 

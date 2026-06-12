@@ -1122,6 +1122,9 @@ export function buildLatexFromOutput(output) {
   const methodology      = clean(output.methodology_text);
   const dataSource       = clean(output.data_source);
   const tools            = clean(output.tools);
+  const hasDesignImage    = !!output.design_image;
+  const designCaption     = clean(output.design_image_caption) || 'System Architecture Review';
+  const designDescription = clean(output.design_description);
   const contributions    = clean(output.contributions);
   const timeline           = clean(output.timeline_budget);
   const timelineStructured = output.timeline_structured || null;
@@ -1272,12 +1275,29 @@ export function buildLatexFromOutput(output) {
   }
 
   // ---- document ----
+
+  // Build design description with a figure cross-reference injected after the first sentence
+  function buildDesignText() {
+    if (!designDescription) return '';
+    const m = designDescription.match(/^(.+?[.!?])(\s+[\s\S]*)?$/);
+    const first = m ? m[1].trim() : designDescription;
+    const rest  = m && m[2] ? m[2].trim() : '';
+    const ref   = hasDesignImage
+      ? ` Figure~\\ref{fig:design} (\\textit{${escapeLatex(designCaption)}}) is shown below.`
+      : '';
+    const firstPara = escapeLatex(first) + ref;
+    const restParas = rest ? '\n\n' + latexParagraph(rest) : '';
+    return firstPara + restParas;
+  }
+
   const footerText = escapeLatex(`CS 222 Spring 2026 --- ${title} --- ${studentName}`);
 
   return String.raw`\documentclass[10pt]{article}
 \usepackage[margin=0.75in,top=0.65in,bottom=0.7in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{caption}
 \usepackage{xcolor}
 \usepackage{colortbl}
 \usepackage{tabularx}
@@ -1296,6 +1316,8 @@ export function buildLatexFromOutput(output) {
 \definecolor{callteal}{HTML}{1E6B9B}
 \definecolor{rowtint}{HTML}{EAF3F8}
 \definecolor{rowalt}{HTML}{F5FAFE}
+
+\captionsetup{labelfont={bf,color=navydark},textfont=it,labelsep=period,skip=6pt}
 
 \setlength{\parskip}{5pt}
 \setlength{\parindent}{0pt}
@@ -1338,6 +1360,21 @@ ${latexParagraph(motivation)}
 ${hypothesis ? `
 \\section{Hypothesis}
 ${hypothesisToItemize(hypothesis)}
+` : ''}
+${(designDescription || hasDesignImage) ? `
+\\section{System Design}
+${buildDesignText()}
+${hasDesignImage ? `
+\\begin{figure}[htbp]
+\\centering
+\\vspace{4pt}
+{\\color{navydark}\\rule{\\linewidth}{0.6pt}}\\\\[6pt]
+\\includegraphics[width=\\textwidth,keepaspectratio]{design-figure.png}
+\\\\[4pt]{\\color{navydark}\\rule{\\linewidth}{0.6pt}}
+\\caption{${escapeLatex(designCaption)}}
+\\label{fig:design}
+\\end{figure}
+` : ''}
 ` : ''}
 ${(methodology || dataSource || tools) ? `
 \\section{Methodology}

@@ -3,7 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { proposalLatexToPdf } from './pdfExport.js';
 import { answerAgentQuestion, generateProposal, startAgentSession, buildLatexFromOutput } from './proposalGenerator.js';
-import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference, reviewProposal, autoFixField, reviewCompleteness, reviewResearchQuality, reviewMethodology, reviewConsistency, reviewCsAcademic, consolidateReviews, correctFromReview } from './claudeRefine.js';
+import { refineProblemStatement, refineTitleAndIntro, enhanceProblemStatement, enhanceDesignDescription, generateMotivation, suggestResearchQuestion, suggestHypotheses, generateMethodology, generateTimeline, structureRisk, suggestMitigation, generateReferences, validateCitations, fetchDoiReference, reviewProposal, autoFixField, reviewCompleteness, reviewResearchQuality, reviewMethodology, reviewConsistency, reviewCsAcademic, consolidateReviews, correctFromReview } from './claudeRefine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -81,6 +81,16 @@ app.post('/api/refine/title-intro', async (request, response) => {
     response.json(result);
   } catch (error) {
     response.status(500).json({ error: 'Title/intro generation failed.', detail: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+app.post('/api/research/enhance-design', async (request, response) => {
+  try {
+    const text = String(request.body?.description || '').trim();
+    if (!text) { response.status(400).json({ error: 'description is required.' }); return; }
+    response.json({ description: await enhanceDesignDescription(text) });
+  } catch (error) {
+    response.status(500).json({ error: 'Enhance failed.', detail: error.message });
   }
 });
 
@@ -335,7 +345,8 @@ app.post('/api/export/pdf', async (request, response) => {
     }
 
     const title = String(payload.title || 'proposal').trim();
-    const pdf = await proposalLatexToPdf(latex, title);
+    const images = payload.images && typeof payload.images === 'object' ? payload.images : {};
+    const pdf = await proposalLatexToPdf(latex, title, images);
 
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', 'attachment; filename="proposal.pdf"');

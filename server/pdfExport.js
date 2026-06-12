@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-export async function proposalLatexToPdf(latex, title = 'proposal') {
+export async function proposalLatexToPdf(latex, title = 'proposal', images = {}) {
   const source = String(latex || '').trim();
 
   if (!source) {
@@ -18,7 +18,15 @@ export async function proposalLatexToPdf(latex, title = 'proposal') {
   const pdfPath = path.join(workdir, 'proposal.pdf');
 
   try {
-    await writeFile(texPath, sanitizeLatexForExport(ensureCompleteLatexDocument(source, title)), 'utf8');
+    const knownImages = new Set();
+    for (const [filename, dataUrl] of Object.entries(images)) {
+      if (!dataUrl || typeof dataUrl !== 'string') continue;
+      const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '');
+      await writeFile(path.join(workdir, filename), Buffer.from(base64, 'base64'));
+      knownImages.add(filename);
+    }
+
+    await writeFile(texPath, sanitizeLatexForExport(ensureCompleteLatexDocument(source, title), knownImages), 'utf8');
     await execFileAsync('tectonic', ['--outdir', workdir, texPath], {
       cwd: workdir,
       timeout: 60000,
@@ -31,14 +39,14 @@ export async function proposalLatexToPdf(latex, title = 'proposal') {
   }
 }
 
-function sanitizeLatexForExport(source) {
-  return replaceExternalImageIncludes(source);
+function sanitizeLatexForExport(source, knownImages = new Set()) {
+  return replaceExternalImageIncludes(source, knownImages);
 }
 
-function replaceExternalImageIncludes(source) {
+function replaceExternalImageIncludes(source, knownImages = new Set()) {
   return String(source || '').replace(
     /\\includegraphics(?:\s*\[[^\]]*\])?\s*\{([^{}]+)\}/g,
-    (_, filename) => imagePlaceholder(filename)
+    (match, filename) => knownImages.has(filename.trim()) ? match : imagePlaceholder(filename)
   );
 }
 
