@@ -8,9 +8,9 @@ The app has three main stages: **draft**, **review**, and **export**.
 
 ---
 
-### Stage 1 — Draft (Two Paths)
+### Stage 1 — Draft
 
-**Primary: 6-step guided stepper**
+**6-step guided stepper**
 
 Each step opens a modal form. Filling in and saving a step populates the corresponding section of the "Research Proposal Draft" panel. LLM-powered helper buttons appear inside each modal.
 
@@ -29,13 +29,14 @@ The **Research Proposal Draft** panel shows the following fields once each step 
 - 3a. Methodology, **3b. Data Source**, 3c. Tools, 3d. Expected Contributions
 - 4. Timeline, 5. Risks & Mitigation, 6. References
 
-**Secondary: LLM suggestion workflow**
-
-Enter a rough idea and click "Structure Idea" to have the LLM return suggested field values and decision cards. Accept or skip suggestions, submit custom notes, then draft a proposal from the assembled fields.
-
 **Workspace Memory**
 
-A Save / Reload / Clear bar sits below the Research Proposal Draft section. Saving snapshots all draft state (all 6 stepper forms + the proposal output) and the LLM suggestion workflow state to browser localStorage. Reloading restores the last saved snapshot. Auto-save fires on every state change.
+A Save / Reload / Clear bar sits below the Research Proposal Draft section. Each button asks for confirmation before acting:
+- **Save** — snapshots all 6 stepper forms and the proposal output to browser localStorage.
+- **Reload** — restores the last saved snapshot.
+- **Clear** — resets all draft fields, clears step completion, and removes the saved snapshot.
+
+Auto-save fires on every state change.
 
 ---
 
@@ -52,7 +53,7 @@ After filling in the draft, click **Review Proposal** to run a client-side analy
 | Writing Quality | Are sentences complete and professional in length? |
 | Consistency | Do title keywords appear in the problem statement? |
 
-**View Issues** lists field-level problems. **Auto Fix** calls the LLM to patch flagged fields in place.
+**View Issues** lists field-level problems. **Auto Fix** calls the LLM to patch flagged fields in place. Scores **automatically refresh** whenever corrections are accepted from any review agent.
 
 **5 Specialist Review Agents + 1 Consolidation Agent**
 
@@ -77,7 +78,12 @@ After any agent produces results, a **"Correct Proposal"** button appears. Each 
 - CS Academic Reviewer → problem statement, hypothesis
 - Consolidation Agent → problem statement, methodology text, contributions
 
-Clicking "Correct Proposal" sends the specific agent's feedback to the LLM, which generates revised text only for those fields. A correction preview panel shows each revised field; **Accept Changes** applies them to the draft, **Discard** clears the preview without saving. After accepting, a green **"Corrections applied to proposal"** banner replaces the button, with a "Correct again" link to re-run if needed. Re-running any agent resets the accepted state.
+Clicking "Correct Proposal" sends the specific agent's feedback to the LLM, which generates revised text only for those fields. A correction preview panel shows each revised field; **Accept Changes** applies them to the draft, **Discard** clears the preview without saving. After accepting:
+- A green **"Corrections applied to proposal"** banner replaces the button, with a "Correct again" link to re-run if needed.
+- The agent's results panel **collapses** and a green **"Review complete"** badge appears next to the reviewer title.
+- The Review Dashboard scores **update automatically** to reflect the corrected fields.
+
+Re-running any agent resets the accepted state and restores full results view.
 
 ---
 
@@ -149,14 +155,14 @@ Install Tectonic: https://tectonic-typesetting.github.io/
 5. Click **Risks & Mitigation** (step 5). Add one or more risks — each with category, description, likelihood, impact, and mitigation. Use "AI Structure Risk" and "AI Suggest Mitigation" to refine each entry. Multiple risks can be added and saved to the list. Click Save. Risks appear in the draft as nested bullets with mitigation sub-bullets.
 6. Click **References** (step 6). Enter a DOI and click "Fetch" to auto-populate a formatted citation from CrossRef, or type one manually. Add as many references as needed. Click Save.
 7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly inline.
-8. Click **Save** in the Workspace Memory bar to persist all draft state to localStorage.
+8. Click **Save** in the Workspace Memory bar. Confirm the dialog to persist all draft state to localStorage. Use **Reload** to restore a saved snapshot, or **Clear** to reset all fields.
 
 ### Reviewing and Correcting
 
 9. Click **Review Proposal** in the Review Dashboard. Scores appear instantly — no API call needed.
 10. Click **View Issues** to see which fields need attention, or **Auto Fix** to let the LLM patch flagged fields automatically.
 11. Run each review agent (Completeness → Research Quality → Methodology → Consistency → CS Academic) using its **Run Agent** button. Read the structured feedback in each card.
-12. For any agent with issues, click **Correct Proposal** to have the LLM generate targeted revisions for only that agent's fields. Review the correction preview and click **Accept Changes** to apply them — a green "Corrections applied" banner confirms success with a "Correct again" option. Click **Discard** to ignore without saving.
+12. For any agent with issues, click **Correct Proposal** to have the LLM generate targeted revisions for only that agent's fields. Review the correction preview and click **Accept Changes** to apply them — the agent collapses, a green "Review complete" badge appears next to its title, the "Corrections applied" banner confirms the changes, and the Review Dashboard scores update automatically. Click **Discard** to ignore without saving.
 13. Once all agents have run, click **Run Consolidation** in the Final Consolidation Agent to get a unified, prioritised Top 5 improvement list. Apply corrections from here as well if desired.
 
 ### Exporting

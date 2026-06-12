@@ -41,11 +41,10 @@ Key env vars:
 
 ## Architecture
 
-Full-stack proposal-writing agent app: React + Vite frontend proxied to an Express API backend. The app has two parallel interaction patterns that feed the same "Research Proposal Draft" output section, followed by a multi-agent Review Dashboard.
+Full-stack proposal-writing agent app: React + Vite frontend proxied to an Express API backend. The app is built around a 6-step guided stepper that feeds the "Research Proposal Draft" output section, followed by a multi-agent Review Dashboard.
 
-### Two interaction paths
+### 6-step guided stepper
 
-**Path A — 6-step guided stepper (primary):**
 Each step opens a modal popup. Saving a step writes structured data into the `proposalOutput` state object, marks the step complete, and populates the matching draft fields in the main panel.
 
 1. **Project Details** (`ProjectDetailsModal`) — research title, student/supervisor info, degree program, research area, budget, objectives. "LLM Generate" calls `POST /api/refine/title-intro` → `refineTitleAndIntro()`.
@@ -55,8 +54,7 @@ Each step opens a modal popup. Saving a step writes structured data into the `pr
 5. **Risks & Mitigation** (`RisksModal`) — risk category, description, likelihood/impact, mitigation. AI actions call `/api/research/structure-risk` and `/api/research/suggest-mitigation`. Multiple risks can be saved in a list.
 6. **References** (`ReferencesModal`) — DOI lookup via `POST /api/research/fetch-doi` → `fetchDoiReference()` which first hits the CrossRef public API (`api.crossref.org`) then falls back to an LLM call. References can also be typed manually.
 
-**Path B — LLM suggestion workflow (secondary):**
-User enters a rough idea in the topic input. "Structure Idea" calls `POST /api/agent/start` → `startAgentSession()` which returns `fieldSuggestions`, `decisions`, and `questions`. The user accepts/skips suggestions using card decks. Custom notes can be submitted via `POST /api/agent/answer` → `answerAgentQuestion()`. Accepted fields populate the "Accepted Project State" panel and `project` state.
+> **Note:** Path B (LLM suggestion workflow — Structure Idea, suggestion card decks, Accepted Project State panel) has been removed from the UI. The corresponding API routes (`/api/agent/start`, `/api/agent/answer`, `/api/proposal`) remain in the server but are no longer called by the frontend.
 
 ### Generate Proposal
 
@@ -66,17 +64,24 @@ The legacy "Generate Proposal" path in the suggestion workflow calls `POST /api/
 
 ### Workspace Memory bar
 
-Sits immediately below the Research Proposal Draft section. Save / Reload / Clear persist the full proposal state to `localStorage` under `proposal-agent-final-project-memory-v1`. The snapshot covers both Path A state (proposalOutput, completedSteps, projectDetails, researchProblemData, methodologyData, timelineActivities, risksData, referencesData) and Path B state (topic, project, fieldSuggestions, decisions, etc.). Auto-save fires on any state change once the initial load has completed.
+Sits immediately below the Research Proposal Draft section. Each button opens a confirmation dialog before acting:
+- **Save** — snapshots `proposalOutput`, `completedSteps`, and all per-modal data to `localStorage` under `proposal-agent-final-project-memory-v1`.
+- **Reload** — restores the last saved snapshot into all state buckets.
+- **Clear** — resets `proposalOutput` to empty, clears all `completedSteps`, resets `projectDetails` / `researchProblemData` / `methodologyData` / `timelineActivities` / `risksData` / `referencesData` to their initial defaults, and removes the localStorage entry.
+
+Auto-save fires on any state change once the initial load has completed.
 
 ### Review Dashboard
 
-Sits below the Research Proposal Draft and Workspace Memory bar. "Review Proposal" runs `computeReviewScores(proposalOutput)` — a **client-side** function that reads the 11 `proposalOutput` fields and produces an integer score for each of six dimensions (Completeness, Methodology, Novelty, References, Writing Quality, Consistency) plus an overall score. No API call is made for this step.
+Sits below the Research Proposal Draft and Workspace Memory bar. "Review Proposal" runs `computeReviewScores(proposalOutput)` — a **client-side** function that reads the `proposalOutput` fields and produces an integer score for each of six dimensions (Completeness, Methodology, Novelty, References, Writing Quality, Consistency) plus an overall score. No API call is made for this step.
 
 The dashboard shows:
 - An overall score bar with color coding (green ≥ 85, amber ≥ 65, red below)
 - Six dimension score bars
 - "View Issues" — lists detected field-level issues
 - "Auto Fix" — calls `POST /api/review/auto-fix` → `autoFixField()` to patch fields inline
+
+Scores **auto-update** whenever corrections are accepted from any review agent — `acceptCorrections()` merges the new output and immediately re-runs `computeReviewScores`.
 
 ### 6 Review Agents
 
@@ -85,6 +90,8 @@ Each agent is an independent LLM call that appears as its own card below the Rev
 - A collapsible **Prompt** panel showing the exact system prompt
 - Structured results rendered with agent-specific UI
 - A **Correct Proposal** button that appears once results are available
+
+After accepting corrections, the agent's results panel **collapses** and a green **"Review complete"** badge appears next to the reviewer title. Re-running the agent resets this state.
 
 | # | Agent | Route | What It Checks |
 |---|---|---|---|
@@ -137,11 +144,11 @@ The main `App` component holds all state. Key state buckets:
 - `projectDetails` / `researchProblemData` / `methodologyData` / `timelineActivities` / `risksData` / `referencesData` — per-modal data
 - `proposalOutput` — flat object with 12 string/array fields that populate the "Research Proposal Draft" section: `research_title`, `objective`, `problem_statement`, `hypothesis`, `motivation`, `methodology_text`, `data_source`, `tools`, `contributions`, `timeline_budget` / `timeline_structured`, `risks_mitigation` / `risks_structured`, `references`
 - `completedSteps` — `{ projectDetails, researchProblem, methodology, timeline, risks, references }` booleans driving stepper appearance
-- `project` / `fieldSuggestions` / `decisions` — Path B (LLM suggestion workflow) state
-- `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API)
+- `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API); auto-refreshed when corrections are accepted
+- `confirmDialog` — `{ action, message }` or `null`; drives the Save/Reload/Clear confirmation popup
 - Per-agent state: `[agent]Loading` / `[agent]Result` / `[agent]Error` / `[agent]PromptOpen` / `[agent]Correcting` / `[agent]Corrections` / `[agent]Accepted` for each of the 6 review agents
 
-Workspace state (all Path A + Path B fields) is serialized to `localStorage` under `proposal-agent-final-project-memory-v1`. Auto-save fires on any change once the initial load completes.
+Workspace state (all stepper form data + proposalOutput) is serialized to `localStorage` under `proposal-agent-final-project-memory-v1`. Auto-save fires on any change once the initial load completes.
 
 ### PDF template (buildLatexFromOutput)
 
