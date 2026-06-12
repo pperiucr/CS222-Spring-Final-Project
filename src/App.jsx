@@ -894,7 +894,7 @@ function App() {
     setCompletedSteps({ projectDetails: false, researchProblem: false, methodology: false, timeline: false, risks: false, references: false });
     setProjectDetails(EMPTY_PROJECT_DETAILS);
     setResearchProblemData({ problem_description: '', motivation: '', primary_question: '', hypotheses: [''] });
-    setMethodologyData({});
+    setMethodologyData(null);
     setTimelineActivities([]);
     setRisksData({ savedRisks: [] });
     setReferencesData({ savedRefs: [] });
@@ -2579,7 +2579,10 @@ const EMPTY_METHODOLOGY = {
 };
 
 function MethodologyModal({ onSave, onClose, initialData }) {
-  const [form, setForm] = useState(initialData || EMPTY_METHODOLOGY);
+  const merged = { ...EMPTY_METHODOLOGY, ...(initialData || {}) };
+  if (!Array.isArray(merged.tools)) merged.tools = [];
+  if (!Array.isArray(merged.contributions)) merged.contributions = [''];
+  const [form, setForm] = useState(merged);
   const [toolInput, setToolInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -2744,7 +2747,13 @@ function MethodologyModal({ onSave, onClose, initialData }) {
 
         <div className="modal-footer">
           <button className="secondary" type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" type="button" onClick={() => onSave(form)}>Save</button>
+          <button className="primary" type="button" onClick={() => {
+            const pending = toolInput.trim();
+            const finalForm = pending && !form.tools.includes(pending)
+              ? { ...form, tools: [...form.tools, pending] }
+              : form;
+            onSave(finalForm);
+          }}>Save</button>
         </div>
       </div>
     </div>
