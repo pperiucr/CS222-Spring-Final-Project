@@ -2621,7 +2621,11 @@ function MethodologyModal({ onSave, onClose, initialData }) {
         tools: form.tools,
         experimentDescription: form.experiment_description
       });
-      setField('generated_methodology', data.methodology);
+      setForm((f) => ({
+        ...f,
+        generated_methodology: data.methodology || '',
+        contributions: data.contributions?.length ? data.contributions : f.contributions
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

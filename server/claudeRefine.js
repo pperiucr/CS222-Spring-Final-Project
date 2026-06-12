@@ -14,7 +14,14 @@ const MOCK = {
     'Integrating retrieval-augmented generation (RAG) with network topology context will reduce hallucination rate in generated configuration commands by at least 40%.',
     'The proposed agent will reduce average incident response time by 30% compared to manual operator workflows in simulated NOC scenarios.'
   ],
-  methodologyText: 'This study adopts an experimental research design combining dataset construction, model fine-tuning, and controlled simulation testing. A corpus of annotated network operation transcripts will be constructed from open NOC logs and synthetic examples. A transformer-based agent will be fine-tuned and evaluated against baseline models using intent accuracy, execution correctness, and latency metrics. Experiments will be conducted in a simulated network environment using GNS3 with representative enterprise topologies.',
+  methodologyText: {
+    methodology: 'This study adopts an experimental research design combining dataset construction, model fine-tuning, and controlled simulation testing. A corpus of annotated network operation transcripts will be constructed from open NOC logs and synthetic examples. A transformer-based agent will be fine-tuned and evaluated against baseline models using intent accuracy, execution correctness, and latency metrics. Experiments will be conducted in a simulated network environment using GNS3 with representative enterprise topologies.',
+    contributions: [
+      'A publicly released corpus of 500+ annotated NOC transcripts for NLP-based network automation research.',
+      'A RAG-augmented transformer agent achieving state-of-the-art command-to-action accuracy on heterogeneous topologies.',
+      'An open-source evaluation benchmark with three baselines and standardised metrics (Precision, Recall, F1, MTTR).'
+    ]
+  },
   timelineActivities: [
     { name: 'Literature Review & Dataset Collection', months: 'Week 1' },
     { name: 'Model Design & Fine-Tuning', months: 'Week 2' },
@@ -490,10 +497,18 @@ Distribute all activities across the full duration. Keep existing activity names
 
 export async function generateMethodology(researchType, dataSource, tools, experimentDescription) {
   if (IS_MOCK) return MOCK.methodologyText;
-  return callGemini(
-    `You are a research proposal expert. Write a clear, structured methodology section (4-6 sentences) for a research proposal. Cover the approach, data collection, tools used, and how the experiment is designed. Professional academic tone. Return only the methodology text, nothing else.`,
+  const result = await callGeminiJson(
+    `You are a research proposal expert. Given the methodology inputs, return a JSON object with two fields:
+1. "methodology": a clear, structured methodology section (4-6 sentences) covering the approach, data collection, tools, and experiment design. Professional academic tone.
+2. "contributions": an array of 2-3 concise, specific expected contributions that follow directly from this methodology. Each contribution should be one sentence, novel, and tied to a concrete deliverable or finding.
+
+Return strict JSON: { "methodology": "...", "contributions": ["...", "...", "..."] }`,
     `Research type: ${researchType}\nData source: ${dataSource}\nTools: ${tools.join(', ')}\nExperiment description: ${experimentDescription}`
   );
+  return {
+    methodology: String(result.methodology || '').trim(),
+    contributions: Array.isArray(result.contributions) ? result.contributions.map(String) : []
+  };
 }
 
 export async function suggestHypotheses(problemDescription, primaryQuestion) {

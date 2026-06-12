@@ -193,8 +193,8 @@ app.post('/api/research/generate-methodology', async (request, response) => {
       response.status(400).json({ error: 'At least experimentDescription or researchType is required.' });
       return;
     }
-    const methodology = await generateMethodology(researchType, dataSource, Array.isArray(tools) ? tools : [], experimentDescription);
-    response.json({ methodology });
+    const result = await generateMethodology(researchType, dataSource, Array.isArray(tools) ? tools : [], experimentDescription);
+    response.json({ methodology: result.methodology, contributions: result.contributions || [] });
   } catch (error) {
     response.status(500).json({ error: 'Methodology generation failed.', detail: error.message });
   }
