@@ -310,54 +310,67 @@ Rules:
 - "introduction": 3-5 sentences stating the research objective — what it aims to achieve, why it matters, and what gap it fills. Professional, academic tone.
 - Return only the JSON object, nothing else.`;
 
-async function callGemini(systemPrompt, userText) {
-  const apiKey = process.env.LLM_API_KEY;
-  const baseUrl = (process.env.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
-  const model = process.env.LLM_MODEL || 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-2.0-flash';
+const RETRY_DELAYS_MS = [1500, 3000, 5000];
 
-  if (!apiKey) throw new Error('LLM_API_KEY is not configured.');
-
+async function geminiRawRequest(model, body, apiKey, baseUrl) {
   const response = await fetch(`${baseUrl}/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userText }] }],
-      generationConfig: { temperature: 0.2 }
-    })
+    body: JSON.stringify(body)
   });
-
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || `Gemini API returned ${response.status}`);
-
+  if (!response.ok) {
+    const err = new Error(data?.error?.message || `Gemini API returned ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
   const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).filter(Boolean).join('');
   if (!text) throw new Error('Gemini returned no content.');
   return text.trim();
 }
 
+async function geminiCallWithRetry(body, apiKey, baseUrl) {
+  const primary = process.env.LLM_MODEL || 'gemini-2.5-flash';
+  const models = primary !== FALLBACK_MODEL ? [primary, FALLBACK_MODEL] : [primary];
+  let lastErr;
+  for (const model of models) {
+    for (let i = 0; i <= RETRY_DELAYS_MS.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[i - 1]));
+      try {
+        return await geminiRawRequest(model, body, apiKey, baseUrl);
+      } catch (err) {
+        lastErr = err;
+        const transient = err.status === 503 || err.status === 429 ||
+          /high demand|overloaded|temporarily unavailable|resource exhausted/i.test(err.message || '');
+        if (!transient) throw err;
+      }
+    }
+  }
+  throw lastErr;
+}
+
+async function callGemini(systemPrompt, userText) {
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey) throw new Error('LLM_API_KEY is not configured.');
+  const baseUrl = (process.env.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
+  return geminiCallWithRetry({
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    generationConfig: { temperature: 0.2 }
+  }, apiKey, baseUrl);
+}
+
 async function callGeminiJson(systemPrompt, userText) {
   const apiKey = process.env.LLM_API_KEY;
-  const baseUrl = (process.env.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
-  const model = process.env.LLM_MODEL || 'gemini-2.5-flash';
-
   if (!apiKey) throw new Error('LLM_API_KEY is not configured.');
-
-  const response = await fetch(`${baseUrl}/models/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userText }] }],
-      generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
-    })
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || `Gemini API returned ${response.status}`);
-
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).filter(Boolean).join('');
-  if (!text) throw new Error('Gemini returned no content.');
-  return JSON.parse(text.trim());
+  const baseUrl = (process.env.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
+  const text = await geminiCallWithRetry({
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
+  }, apiKey, baseUrl);
+  return JSON.parse(text);
 }
 
 export async function enhanceProblemStatement(problemDescription) {
