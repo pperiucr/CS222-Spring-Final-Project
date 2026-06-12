@@ -1739,14 +1739,6 @@ function App() {
               {status === 'starting' ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
               Structure Idea
             </button>
-            <button className="secondary" disabled={status !== 'idle'} onClick={startSampleAgent} type="button">
-              <Sparkles size={18} aria-hidden="true" />
-              Sample
-            </button>
-            <button className="secondary" disabled={!topicInput.trim() || refining || status !== 'idle'} onClick={refineProblem} type="button">
-              {refining ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Wand2 size={18} aria-hidden="true" />}
-              Refine to Problem
-            </button>
             <button className="secondary icon-button" onClick={reset} type="button" aria-label="Reset">
               <RefreshCw size={18} aria-hidden="true" />
             </button>
