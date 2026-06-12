@@ -433,6 +433,7 @@ function App() {
       if (csReviewResult)    reviews['Agent 5: CS Academic'] = csReviewResult;
       const result = await postJson('/api/review/consolidate', { proposalOutput, reviews });
       setConsolidationResult(result);
+      setConsolidationAccepted(true);
     } catch (err) {
       setConsolidationError(err.message || 'Consolidation failed.');
     } finally {
@@ -447,6 +448,7 @@ function App() {
     try {
       const result = await postJson('/api/review/cs-academic', { proposalOutput });
       setCsReviewResult(result);
+      setCsReviewAccepted(true);
     } catch (err) {
       setCsReviewError(err.message || 'CS academic review failed.');
     } finally {
@@ -461,6 +463,7 @@ function App() {
     try {
       const result = await postJson('/api/review/consistency', { proposalOutput });
       setConsistencyResult(result);
+      setConsistencyAccepted(true);
     } catch (err) {
       setConsistencyError(err.message || 'Consistency review failed.');
     } finally {
@@ -475,6 +478,7 @@ function App() {
     try {
       const result = await postJson('/api/review/methodology', { proposalOutput });
       setMethodologyResult(result);
+      setMethodologyAccepted(true);
     } catch (err) {
       setMethodologyError(err.message || 'Methodology review failed.');
     } finally {
@@ -489,6 +493,7 @@ function App() {
     try {
       const result = await postJson('/api/review/quality', { proposalOutput });
       setQualityResult(result);
+      setQualityAccepted(true);
     } catch (err) {
       setQualityError(err.message || 'Quality review failed.');
     } finally {
@@ -503,6 +508,7 @@ function App() {
     try {
       const result = await postJson('/api/review/completeness', { proposalOutput });
       setCompletenessResult(result);
+      setCompletenessAccepted(true);
     } catch (err) {
       setCompletenessError(err.message || 'Completeness review failed.');
     } finally {
