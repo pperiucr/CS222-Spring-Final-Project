@@ -1734,18 +1734,6 @@ function App() {
             />
           )}
 
-          <div className="actions framework-actions">
-            <button className="primary" disabled={!topicInput.trim() || status !== 'idle'} onClick={startAgent} type="button">
-              {status === 'starting' ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
-              Structure Idea
-            </button>
-            <button className="secondary icon-button" onClick={reset} type="button" aria-label="Reset">
-              <RefreshCw size={18} aria-hidden="true" />
-            </button>
-          </div>
-
-          {error ? <p className="error-banner">{error}</p> : null}
-
         </section>
       </section>
     </main>
