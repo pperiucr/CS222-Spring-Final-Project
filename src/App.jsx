@@ -2754,16 +2754,23 @@ function ResearchProblemModal({ onSave, onClose, initialData }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
-  async function callAction(action, bodyExtra = {}) {
-    setBusy(action);
+  async function analyzeAndPopulate() {
+    if (!form.problem_description.trim()) return;
+    setBusy('all');
     setError('');
     try {
-      const body = { problemDescription: form.problem_description, primaryQuestion: form.primary_question, ...bodyExtra };
-      const data = await postJson(`/api/research/${action}`, body);
-      if (action === 'enhance-problem') setForm((f) => ({ ...f, problem_description: data.problemDescription }));
-      if (action === 'motivation') setForm((f) => ({ ...f, motivation: data.motivation }));
-      if (action === 'suggest-question') setForm((f) => ({ ...f, primary_question: data.primaryQuestion }));
-      if (action === 'suggest-hypotheses') setForm((f) => ({ ...f, hypotheses: [...f.hypotheses.filter(h => h.trim()), ...data.hypotheses] }));
+      const enhanced = await postJson('/api/research/enhance-problem', { problemDescription: form.problem_description });
+      const enhancedDesc = enhanced.problemDescription || form.problem_description;
+      setForm((f) => ({ ...f, problem_description: enhancedDesc }));
+
+      const [motivationRes, questionRes] = await Promise.all([
+        postJson('/api/research/motivation', { problemDescription: enhancedDesc }),
+        postJson('/api/research/suggest-question', { problemDescription: enhancedDesc }),
+      ]);
+      setForm((f) => ({ ...f, motivation: motivationRes.motivation, primary_question: questionRes.primaryQuestion }));
+
+      const hypothesesRes = await postJson('/api/research/suggest-hypotheses', { problemDescription: enhancedDesc, primaryQuestion: questionRes.primaryQuestion });
+      setForm((f) => ({ ...f, hypotheses: hypothesesRes.hypotheses?.length ? hypothesesRes.hypotheses : f.hypotheses }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -2807,22 +2814,21 @@ function ResearchProblemModal({ onSave, onClose, initialData }) {
           </label>
 
           <div className="rp-action-row">
-            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('enhance-problem')}>
-              {busy === 'enhance-problem' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Wand2 size={15} aria-hidden="true" />}
-              Enhance Problem Statement
-            </button>
-            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('motivation')}>
-              {busy === 'motivation' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Sparkles size={15} aria-hidden="true" />}
-              Generate Motivation
+            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={analyzeAndPopulate}>
+              {busy === 'all' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <Wand2 size={15} aria-hidden="true" />}
+              {busy === 'all' ? 'Analyzing…' : 'Analyze & Populate Fields'}
             </button>
           </div>
 
-          {form.motivation && (
-            <div className="rp-motivation-box">
-              <span className="rp-motivation-label">Generated Motivation</span>
-              <p>{form.motivation}</p>
-            </div>
-          )}
+          <label>
+            Motivation
+            <textarea
+              value={form.motivation}
+              onChange={(e) => setForm((f) => ({ ...f, motivation: e.target.value }))}
+              placeholder="Why does this problem matter? What gap does it address?"
+              style={{ minHeight: '90px' }}
+            />
+          </label>
 
           <label>
             Primary Research Question
@@ -2851,18 +2857,6 @@ function ResearchProblemModal({ onSave, onClose, initialData }) {
             ))}
           </div>
 
-          <hr className="rp-divider" />
-
-          <div className="rp-action-row">
-            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('suggest-question')}>
-              {busy === 'suggest-question' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <BotMessageSquare size={15} aria-hidden="true" />}
-              Suggest Questions
-            </button>
-            <button className="secondary" type="button" disabled={!form.problem_description.trim() || !!busy} onClick={() => callAction('suggest-hypotheses')}>
-              {busy === 'suggest-hypotheses' ? <Loader2 className="spin" size={15} aria-hidden="true" /> : <BotMessageSquare size={15} aria-hidden="true" />}
-              Suggest Hypotheses
-            </button>
-          </div>
         </div>
 
         <div className="modal-footer">
