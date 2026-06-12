@@ -18,6 +18,7 @@ import {
   Sparkles,
   Trash2,
   Wand2,
+  Wrench,
   X,
   XCircle
 } from 'lucide-react';
@@ -369,6 +370,14 @@ function App() {
     updateOutput(corrections.corrections);
     setCorrections(null);
     if (setAccepted) setAccepted(true);
+    if (reviewResult) setReviewResult(computeReviewScores(newOutput));
+  }
+
+  function applyFix(correctionFields, setAgentAccepted) {
+    if (!correctionFields) return;
+    const newOutput = { ...proposalOutput, ...correctionFields };
+    updateOutput(correctionFields);
+    if (setAgentAccepted) setAgentAccepted(true);
     if (reviewResult) setReviewResult(computeReviewScores(newOutput));
   }
 
@@ -1088,7 +1097,7 @@ function App() {
 
             {completenessError && <p className="error-banner">{completenessError}</p>}
 
-            {completenessResult && !completenessAccepted && (
+            {completenessResult && (
               <div className="agent-results-grid">
                 <div className="agent-checks-panel">
                   <h3 className="agent-panel-heading">Checks</h3>
@@ -1113,7 +1122,10 @@ function App() {
                       <h3 className="agent-panel-heading">Missing</h3>
                       <ul className="agent-findings-list">
                         {completenessResult.missing.map((item, i) => (
-                          <li key={i} className="agent-finding-missing">— {item}</li>
+                          <li key={i} className="agent-finding-item">
+                            <span className="agent-finding-missing">— {item}</span>
+                            <FixButton agentName="Agent 1: Completeness" issueText={`Missing section: ${item}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setCompletenessAccepted)} />
+                          </li>
                         ))}
                       </ul>
                     </>
@@ -1124,7 +1136,10 @@ function App() {
                       <h3 className="agent-panel-heading" style={{ marginTop: '14px' }}>Weak</h3>
                       <ul className="agent-findings-list">
                         {completenessResult.weak.map((item, i) => (
-                          <li key={i} className="agent-finding-weak">— {item}</li>
+                          <li key={i} className="agent-finding-item">
+                            <span className="agent-finding-weak">— {item}</span>
+                            <FixButton agentName="Agent 1: Completeness" issueText={`Weak section: ${item}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setCompletenessAccepted)} />
+                          </li>
                         ))}
                       </ul>
                     </>
@@ -1135,7 +1150,10 @@ function App() {
                       <h3 className="agent-panel-heading" style={{ marginTop: '14px' }}>Missing Details</h3>
                       <ul className="agent-findings-list">
                         {completenessResult.details_missing.map((item, i) => (
-                          <li key={i} className="agent-finding-detail">— {item}</li>
+                          <li key={i} className="agent-finding-item">
+                            <span className="agent-finding-detail">— {item}</span>
+                            <FixButton agentName="Agent 1: Completeness" issueText={`Missing detail: ${item}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setCompletenessAccepted)} />
+                          </li>
                         ))}
                       </ul>
                     </>
@@ -1147,17 +1165,6 @@ function App() {
                 </div>
               </div>
             )}
-            <CorrectionPanel
-              result={completenessResult}
-              correcting={completenessCorrecting}
-              corrections={completenessCorrections}
-              accepted={completenessAccepted}
-              error={completenessError}
-              setError={setCompletenessError}
-              onCorrect={() => handleCorrectFromReview('Agent 1: Completeness', completenessResult, setCompletenessCorrecting, setCompletenessCorrections, setCompletenessError)}
-              onAccept={() => acceptCorrections(completenessCorrections, setCompletenessCorrections, setCompletenessAccepted)}
-              onDiscard={() => setCompletenessCorrections(null)}
-            />
           </div>
 
           <div className="agent-section">
@@ -1184,7 +1191,7 @@ function App() {
 
             {qualityError && <p className="error-banner">{qualityError}</p>}
 
-            {qualityResult && !qualityAccepted && (
+            {qualityResult && (
               <>
                 {qualityResult.overall_verdict && (
                   <div className="quality-verdict-row">
@@ -1222,22 +1229,15 @@ function App() {
                           <p className="quality-block-text">{dim.suggestion}</p>
                         </div>
                       )}
+
+                      {(dim.issue || dim.suggestion) && (
+                        <FixButton agentName="Agent 2: Research Quality" issueText={`${dim.name}: ${dim.issue || ''} Suggestion: ${dim.suggestion || ''}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setQualityAccepted)} />
+                      )}
                     </div>
                   ))}
                 </div>
               </>
             )}
-            <CorrectionPanel
-              result={qualityResult}
-              correcting={qualityCorrecting}
-              corrections={qualityCorrections}
-              accepted={qualityAccepted}
-              error={qualityError}
-              setError={setQualityError}
-              onCorrect={() => handleCorrectFromReview('Agent 2: Research Quality', qualityResult, setQualityCorrecting, setQualityCorrections, setQualityError)}
-              onAccept={() => acceptCorrections(qualityCorrections, setQualityCorrections, setQualityAccepted)}
-              onDiscard={() => setQualityCorrections(null)}
-            />
           </div>
 
           <div className="agent-section">
@@ -1265,7 +1265,7 @@ function App() {
 
             {methodologyError && <p className="error-banner">{methodologyError}</p>}
 
-            {methodologyResult && !methodologyAccepted && (
+            {methodologyResult && (
               <>
                 <div className="meth-summary-row">
                   {methodologyResult.critical_issues > 0 && (
@@ -1307,22 +1307,15 @@ function App() {
                           <pre className="meth-rec-text">{check.recommendation}</pre>
                         </div>
                       )}
+
+                      {check.status !== 'pass' && (
+                        <FixButton agentName="Agent 3: Methodology" issueText={`${check.name}: Weakness: ${check.weakness || ''}. Recommendation: ${check.recommendation || ''}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setMethodologyAccepted)} />
+                      )}
                     </div>
                   ))}
                 </div>
               </>
             )}
-            <CorrectionPanel
-              result={methodologyResult}
-              correcting={methodologyCorrecting}
-              corrections={methodologyCorrections}
-              accepted={methodologyAccepted}
-              error={methodologyError}
-              setError={setMethodologyError}
-              onCorrect={() => handleCorrectFromReview('Agent 3: Methodology', methodologyResult, setMethodologyCorrecting, setMethodologyCorrections, setMethodologyError)}
-              onAccept={() => acceptCorrections(methodologyCorrections, setMethodologyCorrections, setMethodologyAccepted)}
-              onDiscard={() => setMethodologyCorrections(null)}
-            />
           </div>
 
           <div className="agent-section">
@@ -1349,7 +1342,7 @@ function App() {
 
             {consistencyError && <p className="error-banner">{consistencyError}</p>}
 
-            {consistencyResult && !consistencyAccepted && (
+            {consistencyResult && (
               <>
                 <div className="meth-summary-row">
                   {(consistencyResult.inconsistencies || []).filter((i) => i.severity === 'high').length > 0 && (
@@ -1392,6 +1385,7 @@ function App() {
                             <p className="consistency-description">{item.description}</p>
                           )}
                         </div>
+                        <FixButton agentName="Agent 4: Consistency" issueText={`Inconsistency between ${item.section_a} and ${item.section_b}: ${item.description || ''}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setConsistencyAccepted)} />
                       </div>
                     ))}
                   </div>
@@ -1407,17 +1401,6 @@ function App() {
                 )}
               </>
             )}
-            <CorrectionPanel
-              result={consistencyResult}
-              correcting={consistencyCorrecting}
-              corrections={consistencyCorrections}
-              accepted={consistencyAccepted}
-              error={consistencyError}
-              setError={setConsistencyError}
-              onCorrect={() => handleCorrectFromReview('Agent 4: Consistency', consistencyResult, setConsistencyCorrecting, setConsistencyCorrections, setConsistencyError)}
-              onAccept={() => acceptCorrections(consistencyCorrections, setConsistencyCorrections, setConsistencyAccepted)}
-              onDiscard={() => setConsistencyCorrections(null)}
-            />
           </div>
 
           <div className="agent-section">
@@ -1444,7 +1427,7 @@ function App() {
 
             {csReviewError && <p className="error-banner">{csReviewError}</p>}
 
-            {csReviewResult && !csReviewAccepted && (
+            {csReviewResult && (
               <>
                 <div className="cs-overall-block">
                   <div className="cs-overall-top">
@@ -1480,24 +1463,16 @@ function App() {
                     <h3 className="cs-rec-heading">Major Recommendations</h3>
                     <ol className="cs-rec-list">
                       {csReviewResult.major_recommendations.map((rec, i) => (
-                        <li key={i} className="cs-rec-item">{rec}</li>
+                        <li key={i} className="cs-rec-item cs-rec-with-fix">
+                          <span>{rec}</span>
+                          <FixButton agentName="Agent 5: CS Academic" issueText={rec} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setCsReviewAccepted)} />
+                        </li>
                       ))}
                     </ol>
                   </div>
                 )}
               </>
             )}
-            <CorrectionPanel
-              result={csReviewResult}
-              correcting={csReviewCorrecting}
-              corrections={csReviewCorrections}
-              accepted={csReviewAccepted}
-              error={csReviewError}
-              setError={setCsReviewError}
-              onCorrect={() => handleCorrectFromReview('Agent 5: CS Academic', csReviewResult, setCsReviewCorrecting, setCsReviewCorrections, setCsReviewError)}
-              onAccept={() => acceptCorrections(csReviewCorrections, setCsReviewCorrections, setCsReviewAccepted)}
-              onDiscard={() => setCsReviewCorrections(null)}
-            />
           </div>
 
           <div className="agent-section consolidation-section">
@@ -1528,7 +1503,7 @@ function App() {
 
             {consolidationError && <p className="error-banner">{consolidationError}</p>}
 
-            {consolidationResult && !consolidationAccepted && (
+            {consolidationResult && (
               <>
                 {consolidationResult.summary && (
                   <blockquote className="consolidation-summary">{consolidationResult.summary}</blockquote>
@@ -1554,23 +1529,13 @@ function App() {
                             ))}
                           </div>
                         )}
+                        <FixButton agentName="Final Consolidation" issueText={`${item.title}: ${item.description || ''}`} proposalOutput={proposalOutput} onApply={(f) => applyFix(f, setConsolidationAccepted)} />
                       </div>
                     </div>
                   ))}
                 </div>
               </>
             )}
-            <CorrectionPanel
-              result={consolidationResult}
-              correcting={consolidationCorrecting}
-              corrections={consolidationCorrections}
-              accepted={consolidationAccepted}
-              error={consolidationError}
-              setError={setConsolidationError}
-              onCorrect={() => handleCorrectFromReview('Final Consolidation', consolidationResult, setConsolidationCorrecting, setConsolidationCorrections, setConsolidationError)}
-              onAccept={() => acceptCorrections(consolidationCorrections, setConsolidationCorrections, setConsolidationAccepted)}
-              onDiscard={() => setConsolidationCorrections(null)}
-            />
           </div>
 
           <div className="export-actions-bar">
@@ -2508,6 +2473,73 @@ function TimelineModal({ onSave, onClose, initialDuration = 8, initialTeamSize =
           <button className="primary" type="button" onClick={() => onSave({ activities, duration, teamSize, budget })}>Save</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FixButton({ agentName, issueText, proposalOutput, onApply }) {
+  const [loading, setLoading] = useState(false);
+  const [corrections, setCorrections] = useState(null);
+  const [accepted, setAccepted] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleFix() {
+    setLoading(true);
+    setError('');
+    setCorrections(null);
+    setAccepted(false);
+    try {
+      const data = await postJson('/api/review/correct', {
+        proposalOutput,
+        agentName,
+        feedback: { issue: issueText }
+      });
+      if (data.corrections && Object.keys(data.corrections).length > 0) {
+        setCorrections(data);
+      } else {
+        setError('No corrections suggested.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (accepted) {
+    return <span className="fix-accepted-badge"><CheckCircle2 size={13} aria-hidden="true" />Fixed</span>;
+  }
+
+  return (
+    <div className="fix-btn-wrap">
+      {!corrections ? (
+        <>
+          <button className="fix-issue-btn" type="button" onClick={handleFix} disabled={loading}>
+            {loading ? <Loader2 className="spin" size={13} aria-hidden="true" /> : <Wrench size={13} aria-hidden="true" />}
+            {loading ? 'Fixing…' : 'Fix'}
+          </button>
+          {error && <p className="fix-error">{error}</p>}
+        </>
+      ) : (
+        <div className="fix-preview">
+          {corrections.explanation && <p className="fix-explanation">{corrections.explanation}</p>}
+          <div className="fix-fields">
+            {Object.entries(corrections.corrections).map(([field, text]) => (
+              <div key={field} className="fix-field-preview">
+                <span className="fix-field-label">{field.replace(/_/g, ' ')}</span>
+                <p className="fix-field-text">{text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="fix-preview-actions">
+            <button className="primary fix-accept-btn" type="button"
+              onClick={() => { onApply(corrections.corrections); setAccepted(true); setCorrections(null); }}>
+              Accept Changes
+            </button>
+            <button className="secondary" type="button" onClick={() => setCorrections(null)}>Discard</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
