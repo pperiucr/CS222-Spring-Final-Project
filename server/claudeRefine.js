@@ -384,6 +384,12 @@ export async function suggestResearchQuestion(problemDescription) {
   );
 }
 
+function decodeHtml(str) {
+  return String(str)
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'");
+}
+
 function formatCrossRefCitation(work) {
   const authors = (work.author || []).map((a) =>
     `${a.given ? a.given.charAt(0) + '. ' : ''}${a.family || ''}`.trim()
@@ -393,8 +399,8 @@ function formatCrossRefCitation(work) {
     ? `${authors.slice(0, 3).join(', ')}, et al.`
     : authors.join(', ');
 
-  const title = work.title?.[0] || '';
-  const journal = work['container-title']?.[0] || work.publisher || '';
+  const title = decodeHtml(work.title?.[0] || '');
+  const journal = decodeHtml(work['container-title']?.[0] || work.publisher || '');
   const year = work.published?.['date-parts']?.[0]?.[0] || work['published-print']?.['date-parts']?.[0]?.[0] || '';
   const volume = work.volume || '';
   const issue = work.issue || '';
