@@ -259,6 +259,7 @@ function App() {
   const [decisionIndex, setDecisionIndex] = useState(0);
   const [memorySavedAt, setMemorySavedAt] = useState('');
   const [memoryReady, setMemoryReady] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [refining, setRefining] = useState(false);
   const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [projectDetails, setProjectDetails] = useState(EMPTY_PROJECT_DETAILS);
@@ -884,7 +885,19 @@ function App() {
     }
   }
 
-  function clearSavedMemory() {
+  function clearDraft() {
+    setProposalOutput({
+      research_title: '', objective: '', problem_statement: '', hypothesis: '', motivation: '',
+      methodology_text: '', data_source: '', tools: '', contributions: '',
+      timeline_budget: '', timeline_structured: null, risks_mitigation: '', risks_structured: [], references: ''
+    });
+    setCompletedSteps({ projectDetails: false, researchProblem: false, methodology: false, timeline: false, risks: false, references: false });
+    setProjectDetails(EMPTY_PROJECT_DETAILS);
+    setResearchProblemData({ problem_description: '', motivation: '', primary_question: '', hypotheses: [''] });
+    setMethodologyData({});
+    setTimelineActivities([]);
+    setRisksData({ savedRisks: [] });
+    setReferencesData({ savedRefs: [] });
     localStorage.removeItem(MEMORY_KEY);
     setMemorySavedAt('');
   }
@@ -969,13 +982,13 @@ function App() {
               <span>{memorySavedAt ? `Last saved ${formatSavedAt(memorySavedAt)}` : 'Not saved yet'}</span>
             </div>
             <div className="memory-actions">
-              <button className="secondary" type="button" onClick={() => saveMemory()}>
+              <button className="secondary" type="button" onClick={() => setConfirmDialog({ action: 'save', message: 'Save the current draft to workspace memory?' })}>
                 Save
               </button>
-              <button className="secondary" type="button" onClick={() => loadSavedMemory()}>
+              <button className="secondary" type="button" onClick={() => setConfirmDialog({ action: 'reload', message: 'Reload the last saved workspace? Unsaved changes will be lost.' })}>
                 Reload
               </button>
-              <button className="secondary" type="button" onClick={clearSavedMemory}>
+              <button className="secondary" type="button" onClick={() => setConfirmDialog({ action: 'clear', message: 'Clear all draft fields and reset the workspace? This cannot be undone.' })}>
                 Clear
               </button>
             </div>
@@ -1736,6 +1749,31 @@ function App() {
 
         </section>
       </section>
+
+      {confirmDialog && (
+        <div className="confirm-overlay" onClick={() => setConfirmDialog(null)}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <p className="confirm-message">{confirmDialog.message}</p>
+            <div className="confirm-actions">
+              <button
+                className="primary"
+                type="button"
+                onClick={() => {
+                  if (confirmDialog.action === 'save')   saveMemory();
+                  if (confirmDialog.action === 'reload') loadSavedMemory();
+                  if (confirmDialog.action === 'clear')  clearDraft();
+                  setConfirmDialog(null);
+                }}
+              >
+                Confirm
+              </button>
+              <button className="secondary" type="button" onClick={() => setConfirmDialog(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
