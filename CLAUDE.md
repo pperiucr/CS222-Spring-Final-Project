@@ -50,7 +50,7 @@ Each step opens a modal popup. Saving a step writes structured data into the `pr
 1. **Project Details** (`ProjectDetailsModal`) — research title, student/supervisor info, degree program, research area, budget, objectives. "LLM Generate" calls `POST /api/refine/title-intro` → `refineTitleAndIntro()`.
 2. **Research Problem** (`ResearchProblemModal`) — problem description, motivation, primary question, hypotheses. AI actions call `/api/research/enhance-problem`, `/api/research/motivation`, `/api/research/suggest-question`, `/api/research/suggest-hypotheses`.
 3. **Methodology** (`MethodologyModal`) — research type, data source, tools (tag input), experiment description, contributions. "Generate Methodology" calls `POST /api/research/generate-methodology` → `generateMethodology()`.
-4. **Timeline** (`TimelineModal`) — duration (weeks), team size, budget, activity list. "Generate Timeline" calls `POST /api/research/generate-timeline` → `generateTimeline()`.
+4. **Timeline** (`TimelineModal`) — duration (weeks), team size, budget, activity list. No LLM button — the activity list is generated client-side by `defaultActivitiesForDuration(weeks)` on first open. Changing the duration regenerates the default list unless the user has already edited activities manually. On reopen, saved activities are restored. `POST /api/research/generate-timeline` → `generateTimeline()` still exists on the server but is no longer called by the frontend.
 5. **Risks & Mitigation** (`RisksModal`) — risk category, description, likelihood/impact, mitigation. AI actions call `/api/research/structure-risk` and `/api/research/suggest-mitigation`. Multiple risks can be saved in a list.
 6. **References** (`ReferencesModal`) — DOI lookup via `POST /api/research/fetch-doi` → `fetchDoiReference()` which first hits the CrossRef public API (`api.crossref.org`) then falls back to an LLM call. References can also be typed manually.
 
@@ -141,8 +141,8 @@ Detects provider from `LLM_PROVIDER` env var or by matching the URL against `gen
 ### Frontend state
 
 The main `App` component holds all state. Key state buckets:
-- `projectDetails` / `researchProblemData` / `methodologyData` / `timelineActivities` / `risksData` / `referencesData` — per-modal data
-- `proposalOutput` — flat object with 12 string/array fields that populate the "Research Proposal Draft" section: `research_title`, `objective`, `problem_statement`, `hypothesis`, `motivation`, `methodology_text`, `data_source`, `tools`, `contributions`, `timeline_budget` / `timeline_structured`, `risks_mitigation` / `risks_structured`, `references`
+- `projectDetails` / `researchProblemData` / `methodologyData` / `timelineActivities` / `risksData` / `referencesData` — per-modal data. `timelineActivities` starts as `[]`; `defaultActivitiesForDuration(weeks)` generates the initial list client-side when the modal opens with no saved data.
+- `proposalOutput` — flat object with 12 string/array fields that populate the "Research Proposal Draft" section: `research_title`, `objective`, `problem_statement`, `hypothesis`, `motivation`, `methodology_text`, `data_source`, `tools`, `contributions`, `timeline_budget` / `timeline_structured`, `risks_mitigation` / `risks_structured`, `references`. The proposal title heading above the draft reads `proposalOutput.research_title` first (inline-editable), falling back to `projectDetails.research_title` (set via the modal).
 - `completedSteps` — `{ projectDetails, researchProblem, methodology, timeline, risks, references }` booleans driving stepper appearance
 - `reviewResult` — output of `computeReviewScores(proposalOutput)` (client-side, no API); auto-refreshed when corrections are accepted
 - `confirmDialog` — `{ action, message }` or `null`; drives the Save/Reload/Clear confirmation popup

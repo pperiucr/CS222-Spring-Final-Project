@@ -272,7 +272,7 @@ function App() {
   const EMPTY_RESEARCH_PROBLEM_DATA = { problem_description: '', motivation: '', primary_question: '', hypotheses: [''] };
   const [researchProblemData, setResearchProblemData] = useState(EMPTY_RESEARCH_PROBLEM_DATA);
   const [methodologyData, setMethodologyData] = useState(null);
-  const [timelineActivities, setTimelineActivities] = useState(DEFAULT_ACTIVITIES);
+  const [timelineActivities, setTimelineActivities] = useState([]);
   const [risksData, setRisksData] = useState({ savedRisks: [] });
   const [referencesData, setReferencesData] = useState({ savedRefs: [] });
   const [generatePopupOpen, setGeneratePopupOpen] = useState(false);
@@ -928,8 +928,8 @@ function App() {
           />
 
           {completedSteps.projectDetails && <div className="proposal-title-block">
-            {projectDetails.research_title && (
-              <h2 className="proposal-title-main">{projectDetails.research_title}</h2>
+            {(proposalOutput.research_title || projectDetails.research_title) && (
+              <h2 className="proposal-title-main">{proposalOutput.research_title || projectDetails.research_title}</h2>
             )}
             <div className="proposal-title-meta">
               <span><strong>Student:</strong> {projectDetails.student_name || EMPTY_PROJECT_DETAILS.student_name}</span>
@@ -1699,7 +1699,7 @@ function App() {
           )}
           {timelineOpen && (
             <TimelineModal
-              initialDuration={parseInt(projectDetails.timeline, 10) || 6}
+              initialDuration={parseInt(projectDetails.timeline, 10) || 8}
               initialTeamSize={projectDetails.team_size || '1'}
               initialBudget={projectDetails.budget || '$10,000'}
               initialActivities={timelineActivities}
@@ -2372,22 +2372,46 @@ function RisksModal({ onSave, onClose, initialSavedRisks }) {
   );
 }
 
-const DEFAULT_ACTIVITIES = [
-  { name: 'Literature Review', months: 'Week 1' },
-  { name: 'Implementation', months: 'Week 2-3' },
-  { name: 'Experiments', months: 'Week 4-5' },
-  { name: 'Writing', months: 'Week 6' }
-];
+function defaultActivitiesForDuration(weeks) {
+  const n = Math.max(1, Math.round(weeks));
+  const phases = n <= 4
+    ? ['Literature Review & Problem Formulation', 'Design & Implementation', 'Experiments & Analysis', 'Writing & Revision']
+    : n <= 6
+      ? ['Literature Review & Background Research', 'Problem Formulation & Dataset Collection', 'Design & Implementation', 'Experiments & Data Collection', 'Analysis & Evaluation', 'Writing & Revision']
+      : ['Literature Review & Background Research', 'Problem Formulation & Dataset Collection', 'System Design & Tool Setup', 'Prototype Implementation', 'Experiments & Data Collection', 'Analysis & Evaluation', 'Paper Writing & Figures', 'Revision & Submission'];
+  const count = phases.length;
+  const base = Math.floor(n / count);
+  let remainder = n - base * count;
+  const activities = [];
+  let cur = 1;
+  for (let i = 0; i < count; i++) {
+    const w = base + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) remainder--;
+    const end = cur + w - 1;
+    activities.push({ name: phases[i], months: w > 1 ? `Week ${cur}-${end}` : `Week ${cur}` });
+    cur = end + 1;
+  }
+  return activities;
+}
 
-function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize = '1', initialBudget = '', initialActivities }) {
+function TimelineModal({ onSave, onClose, initialDuration = 8, initialTeamSize = '1', initialBudget = '', initialActivities }) {
+  const hasSaved = Array.isArray(initialActivities) && initialActivities.length > 0;
   const [duration, setDuration] = useState(initialDuration);
   const [teamSize, setTeamSize] = useState(initialTeamSize);
   const [budget, setBudget] = useState(initialBudget);
-  const [activities, setActivities] = useState(initialActivities || DEFAULT_ACTIVITIES);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [activities, setActivities] = useState(() => hasSaved ? initialActivities : defaultActivitiesForDuration(initialDuration));
+  const [userEdited, setUserEdited] = useState(hasSaved);
+
+  function handleDurationChange(val) {
+    const n = Math.max(1, Number(val) || 1);
+    setDuration(n);
+    if (!userEdited) {
+      setActivities(defaultActivitiesForDuration(n));
+    }
+  }
 
   function setActivity(index, field, value) {
+    setUserEdited(true);
     setActivities((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -2396,24 +2420,13 @@ function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize =
   }
 
   function addActivity() {
+    setUserEdited(true);
     setActivities((prev) => [...prev, { name: '', months: '' }]);
   }
 
   function removeActivity(index) {
+    setUserEdited(true);
     setActivities((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  async function handleGenerate() {
-    setBusy(true);
-    setError('');
-    try {
-      const data = await postJson('/api/research/generate-timeline', { durationMonths: duration, activities });
-      setActivities(data.activities);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
   }
 
   return (
@@ -2427,8 +2440,6 @@ function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize =
         </div>
 
         <div className="modal-body">
-          {error && <p className="error-banner">{error}</p>}
-
           <div className="modal-grid">
             <div className="timeline-duration-row">
               <span className="modal-field-label">Research Duration</span>
@@ -2438,7 +2449,7 @@ function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize =
                   min="1"
                   max="120"
                   value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
+                  onChange={(e) => handleDurationChange(e.target.value)}
                   style={{ width: '72px', textAlign: 'center' }}
                 />
                 <span className="timeline-months-label">Weeks</span>
@@ -2490,13 +2501,6 @@ function TimelineModal({ onSave, onClose, initialDuration = 6, initialTeamSize =
               </div>
             ))}
           </div>
-
-          <hr className="rp-divider" />
-
-          <button className="llm-help-button" type="button" disabled={busy} onClick={handleGenerate}>
-            {busy ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
-            Generate Timeline
-          </button>
         </div>
 
         <div className="modal-footer">

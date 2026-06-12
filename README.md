@@ -19,7 +19,7 @@ Each step opens a modal form. Filling in and saving a step populates the corresp
 | 1. Project Details | Title, student/supervisor info, degree program, research area, budget, objectives | Generate title and objective from a rough idea |
 | 2. Research Problem | Problem description, motivation, primary question, hypotheses | Enhance problem, generate motivation, suggest question and hypotheses |
 | 3. Methodology | Research type, data source, tools (tag input), experiment design, contributions | Generate full methodology (phase-based bullets in draft panel) |
-| 4. Timeline | Duration (weeks), team size, budget, activity list | Generate a distributed timeline |
+| 4. Timeline | Duration (weeks), team size, budget, activity list | Standard activity list auto-generated from the duration — no LLM button |
 | 5. Risks & Mitigation | Risk category, description, likelihood, impact, mitigation (multiple risks) | AI-structure a risk description, suggest a mitigation strategy |
 | 6. References | DOI lookup (via CrossRef) or manual entry | CrossRef public API; LLM fallback if CrossRef fails |
 
@@ -151,10 +151,10 @@ Install Tectonic: https://tectonic-typesetting.github.io/
 1. Open the app and click **Project Details** (step 1). Fill in your research title, student info, and objectives. Use "LLM Generate" to draft a title and objective from a rough idea. Click Save.
 2. Click **Research Problem** (step 2). Describe the problem, then use the AI buttons to enhance it, generate a motivation paragraph, and suggest a research question and hypotheses. Click Save.
 3. Click **Methodology** (step 3). Select a research type, fill in the data source field, add tools as tags, and describe the experiment. Click "Generate Methodology" to produce a phase-based methodology. Add expected contributions. Click Save. The draft panel shows Data Source (3b) alongside the methodology.
-4. Click **Timeline** (step 4). Set the duration in weeks and list your activities. Use "Generate Timeline" to distribute activities across the duration. Click Save.
+4. Click **Timeline** (step 4). A standard activity list is automatically generated for the duration shown in the weeks box (default 8 weeks). Change the duration to regenerate the list. Edit any activity name or week range directly — once you make an edit, the list is locked to your version and changing the duration no longer regenerates it. Add or remove rows as needed. Click Save.
 5. Click **Risks & Mitigation** (step 5). Add one or more risks — each with category, description, likelihood, impact, and mitigation. Use "AI Structure Risk" and "AI Suggest Mitigation" to refine each entry. Multiple risks can be added and saved to the list. Click Save. Risks appear in the draft as nested bullets with mitigation sub-bullets.
 6. Click **References** (step 6). Enter a DOI and click "Fetch" to auto-populate a formatted citation from CrossRef, or type one manually. Add as many references as needed. Click Save.
-7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly inline.
+7. Review the **Research Proposal Draft** fields in the main panel. Edit any field directly inline. The title heading above the draft always reflects the current value of the "1a. Research Project Title" field — editing it inline updates the heading immediately.
 8. Click **Save** in the Workspace Memory bar. Confirm the dialog to persist all draft state to localStorage. Use **Reload** to restore a saved snapshot, or **Clear** to reset all fields.
 
 ### Reviewing and Correcting

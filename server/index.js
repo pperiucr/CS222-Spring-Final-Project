@@ -178,8 +178,8 @@ app.post('/api/research/suggest-mitigation', async (request, response) => {
 
 app.post('/api/research/generate-timeline', async (request, response) => {
   try {
-    const { durationMonths = 24, activities = [] } = request.body || {};
-    const result = await generateTimeline(Number(durationMonths), activities);
+    const { durationWeeks = 8 } = request.body || {};
+    const result = await generateTimeline(Number(durationWeeks));
     response.json({ activities: result });
   } catch (error) {
     response.status(500).json({ error: 'Timeline generation failed.', detail: error.message });

@@ -23,10 +23,14 @@ const MOCK = {
     ]
   },
   timelineActivities: [
-    { name: 'Literature Review & Dataset Collection', months: 'Week 1' },
-    { name: 'Model Design & Fine-Tuning', months: 'Week 2' },
-    { name: 'Simulation Setup & Experiments', months: 'Week 3' },
-    { name: 'Evaluation, Writing & Revision', months: 'Week 4' }
+    { name: 'Literature Review & Background Research', months: 'Week 1' },
+    { name: 'Problem Formulation & Dataset Collection', months: 'Week 2' },
+    { name: 'System Design & Tool Setup', months: 'Week 3' },
+    { name: 'Prototype Implementation', months: 'Week 4' },
+    { name: 'Experiments & Data Collection', months: 'Week 5' },
+    { name: 'Analysis & Evaluation', months: 'Week 6' },
+    { name: 'Paper Writing & Figures', months: 'Week 7' },
+    { name: 'Revision & Submission', months: 'Week 8' }
   ],
   reference: 'Y. Yu, X. Li, X. Leng, et al., "Fault Management in Software-Defined Networking: A Survey," IEEE Communications Surveys & Tutorials, vol. 21, no. 1, pp. 349-392, 2019.',
   consolidation: {
@@ -498,20 +502,14 @@ export async function suggestMitigation(category, description, likelihood, impac
   );
 }
 
-export async function generateTimeline(durationMonths, activities) {
-  if (IS_MOCK) return MOCK.timelineActivities.slice(0, activities.length);
-  const activityList = activities.map((a) => `- ${a.name}: ${a.months}`).join('\n');
+export async function generateTimeline(durationWeeks) {
+  if (IS_MOCK) return MOCK.timelineActivities;
   const result = await callGeminiJson(
-    `You are a research proposal expert. Given a research duration in weeks and a list of activities, generate a realistic, well-paced timeline. Return strict JSON:
-{
-  "activities": [
-    { "name": "activity name", "months": "Week X" }
-  ]
-}
-Distribute all activities across the full duration. Keep existing activity names. Use "Week X" or "Week X-Y" format. Return only the JSON.`,
-    `Total duration: ${durationMonths} weeks\nActivities:\n${activityList}`
+    `You are a research proposal expert. Generate a realistic standard academic research project timeline for a CS research project. Include 6-8 activities covering: literature review, problem formulation, dataset or tool setup, implementation/development, experiments/evaluation, analysis, paper writing, and revision/submission. Distribute them sensibly across the full duration. Use "Week X" for single-week items or "Week X-Y" for multi-week spans. Return strict JSON only:
+{ "activities": [ { "name": "activity name", "months": "Week X" } ] }`,
+    `Total duration: ${durationWeeks} weeks`
   );
-  return Array.isArray(result.activities) ? result.activities : activities;
+  return Array.isArray(result.activities) ? result.activities : [];
 }
 
 export async function generateMethodology(researchType, dataSource, tools, experimentDescription) {
