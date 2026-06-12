@@ -364,9 +364,11 @@ function App() {
 
   function acceptCorrections(corrections, setCorrections, setAccepted) {
     if (!corrections?.corrections) return;
+    const newOutput = { ...proposalOutput, ...corrections.corrections };
     updateOutput(corrections.corrections);
     setCorrections(null);
     if (setAccepted) setAccepted(true);
+    if (reviewResult) setReviewResult(computeReviewScores(newOutput));
   }
 
   async function handleAutoFix() {
@@ -1054,6 +1056,7 @@ function App() {
               <div className="agent-title-group">
                 <span className="agent-badge">Agent 1</span>
                 <h2 className="agent-heading">Completeness Reviewer</h2>
+                {completenessAccepted && <span className="agent-review-complete-badge"><CheckCircle2 size={13} aria-hidden="true" />Review complete</span>}
               </div>
               <button className="primary" type="button" onClick={handleCompletenessReview} disabled={completenessLoading}>
                 {completenessLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ClipboardCheck size={16} aria-hidden="true" />}
@@ -1072,7 +1075,7 @@ function App() {
 
             {completenessError && <p className="error-banner">{completenessError}</p>}
 
-            {completenessResult && (
+            {completenessResult && !completenessAccepted && (
               <div className="agent-results-grid">
                 <div className="agent-checks-panel">
                   <h3 className="agent-panel-heading">Checks</h3>
@@ -1149,6 +1152,7 @@ function App() {
               <div className="agent-title-group">
                 <span className="agent-badge">Agent 2</span>
                 <h2 className="agent-heading">Research Quality Reviewer</h2>
+                {qualityAccepted && <span className="agent-review-complete-badge"><CheckCircle2 size={13} aria-hidden="true" />Review complete</span>}
               </div>
               <button className="primary" type="button" onClick={handleQualityReview} disabled={qualityLoading}>
                 {qualityLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
@@ -1167,7 +1171,7 @@ function App() {
 
             {qualityError && <p className="error-banner">{qualityError}</p>}
 
-            {qualityResult && (
+            {qualityResult && !qualityAccepted && (
               <>
                 {qualityResult.overall_verdict && (
                   <div className="quality-verdict-row">
@@ -1229,6 +1233,7 @@ function App() {
                 <span className="agent-badge">Agent 3</span>
                 <h2 className="agent-heading">Methodology Reviewer</h2>
                 <span className="agent-critical-tag">Critical</span>
+                {methodologyAccepted && <span className="agent-review-complete-badge"><CheckCircle2 size={13} aria-hidden="true" />Review complete</span>}
               </div>
               <button className="primary" type="button" onClick={handleMethodologyReview} disabled={methodologyLoading}>
                 {methodologyLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ListChecks size={16} aria-hidden="true" />}
@@ -1247,7 +1252,7 @@ function App() {
 
             {methodologyError && <p className="error-banner">{methodologyError}</p>}
 
-            {methodologyResult && (
+            {methodologyResult && !methodologyAccepted && (
               <>
                 <div className="meth-summary-row">
                   {methodologyResult.critical_issues > 0 && (
@@ -1312,6 +1317,7 @@ function App() {
               <div className="agent-title-group">
                 <span className="agent-badge">Agent 4</span>
                 <h2 className="agent-heading">Consistency Reviewer</h2>
+                {consistencyAccepted && <span className="agent-review-complete-badge"><CheckCircle2 size={13} aria-hidden="true" />Review complete</span>}
               </div>
               <button className="primary" type="button" onClick={handleConsistencyReview} disabled={consistencyLoading}>
                 {consistencyLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <RefreshCw size={16} aria-hidden="true" />}
@@ -1330,7 +1336,7 @@ function App() {
 
             {consistencyError && <p className="error-banner">{consistencyError}</p>}
 
-            {consistencyResult && (
+            {consistencyResult && !consistencyAccepted && (
               <>
                 <div className="meth-summary-row">
                   {(consistencyResult.inconsistencies || []).filter((i) => i.severity === 'high').length > 0 && (
@@ -1406,6 +1412,7 @@ function App() {
               <div className="agent-title-group">
                 <span className="agent-badge">Agent 5</span>
                 <h2 className="agent-heading">CS Academic Reviewer</h2>
+                {csReviewAccepted && <span className="agent-review-complete-badge"><CheckCircle2 size={13} aria-hidden="true" />Review complete</span>}
               </div>
               <button className="primary" type="button" onClick={handleCsReview} disabled={csReviewLoading}>
                 {csReviewLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <ClipboardCheck size={16} aria-hidden="true" />}
@@ -1424,7 +1431,7 @@ function App() {
 
             {csReviewError && <p className="error-banner">{csReviewError}</p>}
 
-            {csReviewResult && (
+            {csReviewResult && !csReviewAccepted && (
               <>
                 <div className="cs-overall-block">
                   <div className="cs-overall-top">
@@ -1485,6 +1492,7 @@ function App() {
               <div className="agent-title-group">
                 <span className="agent-badge agent-badge-final">Final</span>
                 <h2 className="agent-heading">Final Consolidation Agent</h2>
+                {consolidationAccepted && <span className="agent-review-complete-badge"><CheckCircle2 size={13} aria-hidden="true" />Review complete</span>}
               </div>
               <button className="primary" type="button" onClick={handleConsolidation} disabled={consolidationLoading}>
                 {consolidationLoading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
@@ -1507,7 +1515,7 @@ function App() {
 
             {consolidationError && <p className="error-banner">{consolidationError}</p>}
 
-            {consolidationResult && (
+            {consolidationResult && !consolidationAccepted && (
               <>
                 {consolidationResult.summary && (
                   <blockquote className="consolidation-summary">{consolidationResult.summary}</blockquote>
